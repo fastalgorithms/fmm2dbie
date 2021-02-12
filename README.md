@@ -2,7 +2,7 @@
 
 ## FMM-accelerated boundary integral equation solvers in two dimensions
 
-Currently supports $16$th order discretization of smooth curves in the
+Currently supports 16th order discretization of smooth curves in the
 go2 format
 
 Upcoming support for: 
