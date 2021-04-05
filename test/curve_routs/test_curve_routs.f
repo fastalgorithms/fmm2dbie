@@ -51,6 +51,7 @@
       nover = 1
       nch = 0
       ier = 0
+      eps = 1.0d-7
       call chunkfunc_guru(eps,rlmax,ifclosed,irefinel,irefiner,rlmaxe,
      1  ta,tb,fstarn_simple,ndd,dpars,ndz,zpars,ndi,ipars,nover,
      2  k,nchmax,nch,norders,ixys,iptype,npts,srcvals,srccoefs,ab,adjs,
@@ -61,13 +62,15 @@
       call prinf('adjs=*',adjs,2*nch)
       call prin2('srcvals=*',srcvals,96)
       call prin2('srccoefs=*',srccoefs,72)
+      call prinf('npts=*',npts,1)
       allocate(xs(npts),ys(npts))
       do i=1,npts
          xs(i) = srcvals(1,i)
          ys(i) = srcvals(2,i)
       enddo
 
-      call pyplot(18,xs,ys,npts,1,'a')
+
+      call pyplot(18,xs,ys,npts,1,'a*')
       
 
       return

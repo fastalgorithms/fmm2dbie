@@ -358,7 +358,8 @@
       enddo
 !
  5100 continue
-
+      call prin2('ab=*',ab,2*nch)
+      call prinf('adjs=*',adjs,2*nch)
 !
 !       the curve should be resolved to precision eps now on
 !       each interval ab(,i)
@@ -366,7 +367,7 @@
 !       factor of more than 2, split them as well. iterate until done.
 !
 
-      maxiter=1000
+      maxiter=2
       do ijk=1,maxiter
 !
         nchold=nch
@@ -442,7 +443,7 @@
 !       . . . if there's an i2, update it
 !
           if (i2 .gt. 0) then
-            adjs(1,i2) = nch+1
+            adjs(1,i2) = nch
           endif
 !
           ab(1,i)=a
@@ -457,6 +458,7 @@
         if (ifdone .ne. 0) goto 9100
       enddo
  9100 continue
+      call prinf('nch=*',nch,1)
 
 !
 !       go ahead and oversample by nover, updating

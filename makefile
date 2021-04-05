@@ -154,8 +154,8 @@ install: $(STATICLIB) $(DYNAMICLIB)
 #
 test: $(STATICLIB) test/curv 
 	cd test/curve_routs; ./int2-curv
-	cat print_testres.txt
-	rm print_testres.txt
+#	cat print_testres.txt
+#	rm print_testres.txt
 
 test/curv:
 	$(FC) $(FFLAGS) test/curve_routs/test_curve_routs.f -o test/curve_routs/int2-curv lib-static/$(STATICLIB) $(LIBS) 

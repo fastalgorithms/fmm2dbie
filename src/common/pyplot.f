@@ -96,7 +96,7 @@ c
 c
         subroutine pyplot(iw,x,y,n,itype,title)
         implicit real *8 (a-h,o-z)
-        real *8 x(1),y(1)
+        real *8 x(*),y(*)
         character *1 a1,a10,file1(10),file11(9),title(1),file1p(10),
      1      temp(32)
         character *2 ls1
@@ -160,15 +160,19 @@ c
 cccc        write(iun87, '(a)') 'pt.axes().set_aspect("equal")'
 ccc        write(iun87,'(a)') 'pt.show()'
         write(iun87,'(a,a,a)') 'pt.savefig("',file8p,'")'
+        close(iun87)
 
 c
 c       now print out the data file, plotiw.dat
 c
-        iun88=88
+        iun88=888
+        call prin2('x=*',x,n)
+        call prin2('y=*',y,n)
         open(unit=iun88,file=file8)
-        do 1600 i=1,n
-        write(iun88,*) x(i), y(i)
- 1600 continue
+        do i=1,n
+          write(iun88,*) x(i), y(i)
+        enddo
+        close(iun88)
 
 c
         return

@@ -1,3 +1,6 @@
 *.o
 int2*
+*.dat
+plot*.py
+fort.*
 
