@@ -151,7 +151,7 @@ c
         write(iun87,'(a)') ''
 c
         write(iun87,'(a,a,a)') 'x = np.loadtxt("',file8,'")'
-        write(iun87,'(a)') 'x = x.reshape(np.size(x)/2,2)'
+        write(iun87,'(a)') 'x = x.reshape(int(np.size(x)/2),2)'
         write(iun87,'(a)') 'x1=x[:,0]'
         write(iun87,'(a)') 'x2=x[:,1]'
 c
@@ -166,8 +166,6 @@ c
 c       now print out the data file, plotiw.dat
 c
         iun88=888
-        call prin2('x=*',x,n)
-        call prin2('y=*',y,n)
         open(unit=iun88,file=file8)
         do i=1,n
           write(iun88,*) x(i), y(i)
@@ -243,13 +241,13 @@ c
         write(iun87,'(a)') ''
 c
         write(iun87,'(a,a,a)') 'x = np.loadtxt("',file8,'")'
-        write(iun87,'(a)') 'x = x.reshape(np.size(x)/2,2)'
+        write(iun87,'(a)') 'x = x.reshape(int(np.size(x)/2),2)'
         write(iun87,'(a)') 'x1=x[:,0]'
         write(iun87,'(a)') 'x2=x[:,1]'
 c
         write(iun87,'(a)') ''
         write(iun87,'(a,a,a)') 'y = np.loadtxt("',file9,'")'
-        write(iun87,'(a)') 'y = y.reshape(np.size(y)/2,2)'
+        write(iun87,'(a)') 'y = y.reshape(int(np.size(y)/2),2)'
         write(iun87,'(a)') 'y1=y[:,0]'
         write(iun87,'(a)') 'y2=y[:,1]'
 c
@@ -257,7 +255,6 @@ c
         write(iun87,'(a,a,a)') 'pt.plot(x1,x2,"',ls1,'")'
         write(iun87,'(a,a,a)') 'pt.plot(y1,y2,"',ls2,'")'
         write(iun87,'(a,a,a)') 'pt.title("', title2, '")'
-        write(iun87, '(a)') 'pt.axes().set_aspect("equal")'
         write(iun87,'(a)') 'pt.show()'
 
 c

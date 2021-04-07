@@ -14,6 +14,7 @@
       real *8, allocatable :: srcvals(:,:),srccoefs(:,:),ab(:,:)
       integer, allocatable :: norders(:),ixys(:),iptype(:),adjs(:,:)
       real *8, allocatable :: xs(:),ys(:)
+      real *8, allocatable :: xs2(:),ys2(:)
       real *8 dpars(2)
       integer ipars(1)
       complex *16 zpars
@@ -25,7 +26,7 @@
       pi = atan(done)*4
 
 
-      nchmax = 10000
+      nchmax = 20000
       k = 12
       npts_max = nchmax*k
       allocate(srcvals(8,npts_max),srccoefs(6,npts_max),ab(2,nchmax))
@@ -34,7 +35,7 @@
 
       irefinel = 0
       irefiner = 0
-      rlmax = 1.0d3
+      rlmax = 1.0d10
       ta = 0
       tb = 2*pi
       ifclosed = 1
@@ -45,32 +46,40 @@
       ndz = 0
       
       dpars(1) = 1.0d0
-      dpars(2) = 0.1d0
+      dpars(2) = 0.5d0
 
-      ipars(1) = 3
+      ipars(1) = 60
       nover = 1
       nch = 0
       ier = 0
-      eps = 1.0d-7
+      eps = 1.0d-5
       call chunkfunc_guru(eps,rlmax,ifclosed,irefinel,irefiner,rlmaxe,
      1  ta,tb,fstarn_simple,ndd,dpars,ndz,zpars,ndi,ipars,nover,
      2  k,nchmax,nch,norders,ixys,iptype,npts,srcvals,srccoefs,ab,adjs,
      3  ier)
       
       call prinf('ier=*',ier,1)
+      if(ier.ne.0) then
+        call prinf('failed to execute*',ier,1)
+        stop
+      endif
       call prinf('nch=*',nch,1)
-      call prinf('adjs=*',adjs,2*nch)
-      call prin2('srcvals=*',srcvals,96)
-      call prin2('srccoefs=*',srccoefs,72)
-      call prinf('npts=*',npts,1)
       allocate(xs(npts),ys(npts))
       do i=1,npts
          xs(i) = srcvals(1,i)
          ys(i) = srcvals(2,i)
       enddo
 
+      allocate(xs2(nch),ys2(nch))
 
-      call pyplot(18,xs,ys,npts,1,'a*')
+      do i=1,nch
+        call fstarn_simple(ab(1,i),ndd,dpars,ndz,zpars,ndi,ipars,
+     1     xs2(i),ys2(i),dx,dy,dx2,dy2)
+
+      enddo
+
+
+      call pyplot2(18,xs2,ys2,nch,1,xs,ys,npts,3,'a*')
       
 
       return
@@ -99,9 +108,11 @@ c
       integer ipars
       complex *16 zpars
 
+      rsc = 1.0d0
+
       n = ipars
-      r1 = dpars(1)
-      r2 = dpars(2)
+      r1 = dpars(1)*rsc
+      r2 = dpars(2)*rsc
 
       r = r1 + r2*cos(n*t)
       drdt = -r2*n*sin(n*t)

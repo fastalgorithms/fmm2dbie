@@ -173,7 +173,13 @@
       integer, allocatable :: ifprocess(:)
       real *8, allocatable :: xs(:),ws(:),u(:,:),v(:,:)
       real *8, allocatable :: xs2(:),ws2(:),u2(:,:),v2(:,:)
-      real *8, allocatable :: fvals(:,:),coefs(:,:),errs(:) 
+      real *8, allocatable :: fvals(:,:),finterp(:,:),ximat(:,:)
+      real *8, allocatable :: finterpex(:,:),work(:),curv(:)
+      real *8 rints(4),rints0(4),rinttmp(4),errs(4),errs0(4),epsuse
+      real *8 rintssq(4)
+      real *8 cxy(2),cxy0(2),cxytmp(2)
+      complex *16 z,zd,zd2,ima
+      data ima/(0.0d0,1.0d0)/
       
       done=1
       pi=4*atan(done)
@@ -185,8 +191,7 @@
       enddo
 
       ntail = 3 + k/12
-      if(k.le.12) kuse = k + 3
-      if(k.gt.12) kuse = k
+      kuse = k + ntail
       allocate(xs(k),ws(k),u(k,k),v(k,k))
       allocate(xs2(kuse),ws2(kuse),u2(kuse,kuse),v2(kuse,kuse))
 
@@ -197,6 +202,8 @@
       itype=2
       call legeexps(itype,k,xs,u,v,ws)
       call legeexps(itype,kuse,xs2,u2,v2,ws2)
+  
+      
 
 !
 !       . . . start chunking
@@ -209,23 +216,44 @@
       adjs(2,1)=-1
       nchnew=nch
 
-      allocate(fvals(8,kuse))
-      allocate(coefs(8,kuse),errs(8))
+      allocate(fvals(2,k))
+      allocate(finterpex(2,kuse),finterp(2,kuse),ximat(kuse,k))
+      lw = 2*k**2 + k+100
+      allocate(work(lw))
+      call lematrin(k,kuse,xs2,ximat,xs,work)
+      
+      
+      
 !
 !  Estimate arc length of curve
 !
 !
       rlcurve = 0
       call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-        ta,tb,xs2,ws2,rlcurve)
+         ta,tb,xs2,ws2,rlcurve)
       rlcurve0 = rlcurve
+      call prin2('rlcurve=*',rlcurve,1)
+      allocate(curv(kuse))
+      call chunkcurv(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars,&
+        ta,tb,xs2,ws2,curv)
+      rkmax = 1+abs(curv(1))
+      rkmin = 1+abs(curv(1))
+      do i=1,kuse
+        if(1+abs(curv(i)).gt.rkmax) rkmax = 1+abs(curv(i))
+        if(1+abs(curv(i)).lt.rkmax) rkmin = 1+abs(curv(i))
+      enddo
+      
 
       alpha = 1.0d0
       beta = 0.0d0
 
+ 1311 format(2x,i1,2x,i4,5(2x,e11.5))
       maxiter=10000
       do ijk = 1,maxiter
         rlcurve = rlcurve0
+        epsuse = max(eps,2.0d0**(-51)*rkmax/rkmin*10)
+!        print *, ijk,rlcurve,rkmax,rkmin,epsuse,2.0d0**(-51)*rkmax/rkmin*10
+!        read *, i
 !
 !     loop through all existing chunks, if resolved store, if not split
 !
@@ -237,40 +265,54 @@
 !
           a=ab(1,ich)
           b=ab(2,ich)
-          rlpan = 0
+
 !
-          do i=1,kuse
-            t=a+(b-a)*(xs2(i)+1)/2
+          do i=1,k
+            t=a+(b-a)*(xs(i)+1)/2
             call funcurve(t,ndd,dpars,ndz,zpars,ndi,ipars, &
-            fvals(1,i),fvals(2,i),fvals(3,i),fvals(4,i), &
-            fvals(5,i),fvals(6,i))
+            x,y,dx,dy,dx2,dy2)
 
-            fvals(7,i)=sqrt(fvals(3,i)**2+fvals(4,i)**2)
-            fvals(8,i) = 0
-            rlpan = rlpan + fvals(7,i)*ws2(i)*(b-a)/2
+            fvals(1,i) = sqrt(dx**2 + dy**2)
+            zd = dx + ima*dy
+            zd2 = dx2 + ima*dy2
+            fvals(2,i) = imag(zd2/zd)**2/fvals(1,i) 
+            
           enddo
 
-          call dgemm('n','t',8,kuse,kuse,alpha,fvals,8,u2,kuse, &
-              beta,coefs,8)
+          rlpan = 0
+          do i=1,kuse
+            t = a+(b-a)*(xs2(i)+1)/2
+            call funcurve(t,ndd,dpars,ndz,zpars,ndi,ipars, &
+              x,y,dx,dy,dx2,dy2)
 
-          do i=1,8
-            errs(i) = 0
+            finterpex(1,i) = sqrt(dx**2 + dy**2)
+            zd = dx + ima*dy
+            zd2 = dx2 + ima*dy2
+            finterpex(2,i) = imag(zd2/zd)**2/finterpex(1,i)
+            rk = abs(imag(zd2/zd)/finterpex(1,i))+1
+            if(rk.gt.rkmax) rkmax = rk
+            if(rk.lt.rkmin) rkmin = rk
+            
+            rlpan = rlpan + finterpex(1,i)*ws2(i)*(b-a)/2
           enddo
 
-          do j=kuse-ntail+1,kuse
-            do i=1,7
-              errs(i) = errs(i) + coefs(i,j)**2 
-            enddo
+          call dgemm('n','t',2,kuse,k,alpha,fvals,2,ximat,kuse, &
+              beta,finterp,2)
+          err1 = 0
+          err2 = 0
+          r1 = 0
+          r2 = 0
+          do i=1,kuse
+            err1 = err1 + (finterp(1,i)-finterpex(1,i))**2
+            r1 = r1 + finterpex(1,i)**2
+            err2 = err2 + (finterp(2,i)-finterpex(2,i))**2
+            r2 = r2 + finterpex(2,i)**2
           enddo
-          errs(i) = errs(i)*(b-a)/2
+          err1 = sqrt(err1/r1)
+          err2 = sqrt(err2)*rlpan/(1.0d0+sqrt(r2)*rlpan)
+
 !            
 !
-          rmsemax = 0.0d0
-          do i=1,7
-            errs(i) = sqrt(errs(i)/ntail)
-            if (errs(i) .gt. rmsemax) rmsemax=errs(i)
-          enddo
-
 !
 !       . . . mark as processed and resolved if less than eps
 !
@@ -284,7 +326,18 @@
 !
 !
 !
-          if (rmsemax .gt. eps*sqrt(rlpan/rlcurve)) goto 2800
+          rmsemax = 0.0d0
+          if(err1.gt.epsuse) then
+!            print *, "1,",ich,err1,rlcurve,rlpan
+            goto 2800
+          endif
+
+          if(err2.gt.epsuse) then
+!            print *, "2",ich,err2,rlpan
+            goto 2800
+          endif
+
+
           if (rlpan.gt.rlmax) goto 2800
           goto 4600
 !
@@ -358,8 +411,7 @@
       enddo
 !
  5100 continue
-      call prin2('ab=*',ab,2*nch)
-      call prinf('adjs=*',adjs,2*nch)
+!      read *, i
 !
 !       the curve should be resolved to precision eps now on
 !       each interval ab(,i)
@@ -410,7 +462,7 @@
 !       iterating a couple times will catch everything
 !
           ifsplit=0
-          sc = 2.05d0
+          sc = 2.001d0
           if (rlself .gt. sc*rl1) ifsplit=1
           if (rlself .gt. sc*rl2) ifsplit=1
           if (ifsplit .eq. 0) goto 8600
@@ -458,7 +510,6 @@
         if (ifdone .ne. 0) goto 9100
       enddo
  9100 continue
-      call prinf('nch=*',nch,1)
 
 !
 !       go ahead and oversample by nover, updating
@@ -768,3 +819,177 @@
 !
 !
       
+  
+      subroutine chunkints(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+        ta,tb,xs,ws,rints,rl)
+!
+!  Using a k point gaussian quadrature, calculate the
+!  following integrals on the curve between a,b
+!  rints(1) = \int_{a}^{b} |dxdt(t)|^2 dt
+!  rints(2) = \int_{a}^{b} |dydt(t)|^2 dt
+!  rints(3) = \int_{a}^{b} (dsdt)^2 dt
+!  rints(4) = \int_{a}^{b} (k(t)^2dsdt) dt
+!  rl = \int_{a}^{b} dsdt dt
+!
+!
+!  The curve as before
+!  is specificed throught a user-defined subroutine funcurve
+!  whose calling expected calling sequence is
+!
+!  funcurve(t,ndd,dpars,ndz,zpars,ndi,ipars,x,y,dxdt,dydt,dxdt2,dydt2)
+!
+!  Input arguments:  
+!    - k: integer
+!        number of legendre nodes to be used in gaussian quadrature 
+!    - funcurve: function handle
+!        function which returns x,y,dxdt,dydt,dxdt2,dydt2
+!        for a given point in parameter space
+!    - ndd: integer
+!        length of double precision parameter array for funcurve
+!    - dpars: double precision(ndd)
+!        list of double precision parameters for funcurve
+!    - ndz: integer
+!        length of complex parameter array for funcurve
+!    - dpars: double comlex(ndd)
+!        list of complex parameters for funcurve
+!    - ndi: integer
+!        length of integer parameter array for funcurve
+!    - ipars: integer(ndi)
+!        list of integer parameters for funcurve
+!    - ta,tb: double precision
+!        find length of curve for ta\leq t \leq tb
+!    - xs,ws: double precision(k)
+!        order k legendre nodes and weights
+!
+!  Output arguments:
+!    - rints: double precision(4)
+!        the integrals above
+!    - rl: double precision
+!       length of curve 
+
+      implicit none
+      integer, intent(in) :: k,ndd,ndz,ndi,ipars(ndi)
+      real *8, intent(in) :: dpars(ndd),ta,tb,xs(k),ws(k)
+      complex *16, intent(in) :: zpars(ndz)
+      real *8, intent(out) :: rl,rints(4)
+      
+      integer i
+      real *8 t,dsdt,h,x,y,dx,dy,dx2,dy2,rtmp,ra
+      complex *16 zd,zd2,ima
+      data ima/(0.0d0,1.0d0)/
+
+      external funcurve
+      
+      rl = 0
+      h = (tb-ta)/2
+      do i=1,4
+        rints(i) = 0
+      enddo
+      call prinf('k=*',k,1)
+      call prinf('ndi=*',ndi,1)
+      call prinf('ipars=*',ipars,ndi)
+      call prin2('dpars=*',dpars,ndd)
+      call prin2('xs=*',xs,k)
+      call prin2('ws=*',ws,k)
+      ra = 0
+      do i=1,k
+        t = ta + (tb-ta)*(xs(i)+1)/2
+        call funcurve(t,ndd,dpars,ndz,zpars,ndi,ipars, &
+              x,y,dx,dy,dx2,dy2)
+            
+        dsdt = sqrt(dx**2+dy**2)
+        zd2 = dx2 + ima*dy2
+        zd = dx + ima*dy
+        rtmp = imag(zd2/zd)**2/dsdt
+        rints(1) = rints(1) + dx**2*h*ws(i)
+        rints(2) = rints(2) + dy**2*h*ws(i)
+        rints(3) = rints(3) + dsdt**2*h*ws(i)
+        rints(4) = rints(4) + rtmp*h*ws(i)
+        rl = rl + dsdt*ws(i)*h
+        ra = ra + ws(i)
+      enddo
+
+
+      return
+      end
+!
+!
+!
+!
+!
+!
+      
+!
+!
+!
+!
+!
+  
+      subroutine chunkcurv(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+        ta,tb,xs,ws,curv)
+!
+!  At the k point gaussian quadrature, calculate the curvature
+!  of a curve between a and b. The curve as before
+!  is specificed throught a user-defined subroutine funcurve
+!  whose calling expected calling sequence is
+!
+!  funcurve(t,ndd,dpars,ndz,zpars,ndi,ipars,x,y,dxdt,dydt,dxdt2,dydt2)
+!
+!  Input arguments:  
+!    - k: integer
+!        number of legendre nodes to be used in gaussian quadrature 
+!    - funcurve: function handle
+!        function which returns x,y,dxdt,dydt,dxdt2,dydt2
+!        for a given point in parameter space
+!    - ndd: integer
+!        length of double precision parameter array for funcurve
+!    - dpars: double precision(ndd)
+!        list of double precision parameters for funcurve
+!    - ndz: integer
+!        length of complex parameter array for funcurve
+!    - dpars: double comlex(ndd)
+!        list of complex parameters for funcurve
+!    - ndi: integer
+!        length of integer parameter array for funcurve
+!    - ipars: integer(ndi)
+!        list of integer parameters for funcurve
+!    - ta,tb: double precision
+!        find length of curve for ta\leq t \leq tb
+!    - xs,ws: double precision(k)
+!        order k legendre nodes and weights
+!
+!  Output arguments:
+!    - curv: double precision(k)
+!       length of curve 
+
+      implicit none
+      integer, intent(in) :: k,ndd,ndz,ndi,ipars(ndi)
+      real *8, intent(in) :: dpars(ndd),ta,tb,xs(k),ws(k)
+      complex *16, intent(in) :: zpars(ndz)
+      real *8, intent(out) :: curv(k)
+      
+      integer i
+      real *8 t,dsdt,h,x,y,dx,dy,dx2,dy2
+
+      external funcurve
+      
+      h = (tb-ta)/2
+      do i=1,k
+        t = ta + (tb-ta)*(xs(i)+1)/2
+        call funcurve(t,ndd,dpars,ndz,zpars,ndi,ipars, &
+              x,y,dx,dy,dx2,dy2)
+        dsdt = sqrt(dx**2+dy**2)
+        curv(i) = (dy2*dx-dx2*dy)/dsdt**3
+      enddo
+
+
+      return
+      end
+!
+!
+!
+!
+!
+!
+      
+  
