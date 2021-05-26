@@ -71,16 +71,16 @@ c
       allocate(zintvals(nporder,ntarg),zintvalsex(nporder,ntarg))
 
       call zchunkints_lege(eps,norder,srccoefs,ndtarg,ntarg,xytarg,
-     1  nporder,dlslp,ndd,dpars,ndz,zpars,ndi,ipars,nqorder,nchmax,
+     1  nporder,zldlp,ndd,dpars,ndz,zpars,ndi,ipars,nqorder,nchmax,
      2  zintvals)
 
-      zintvalsex(1,1) = -0.4367645330548260 - 0.1105413886042094*ima  
-      zintvalsex(2,1) = 0.1721803173223552 + 0.0818896608232826*ima
-      zintvalsex(3,1) = -0.07688202898492064 - 0.05636811187599036*ima
+      zintvalsex(1,1) = -0.4367645330548260d0-0.1105413886042094d0*ima  
+      zintvalsex(2,1) = 0.1721803173223552d0+0.0818896608232826d0*ima
+      zintvalsex(3,1) = -0.07688202898492064d0-0.05636811187599036d0*ima
 
-      zintvalsex(1,2) = 0.0982358058709252 + 0.4825327362729426*ima
-      zintvalsex(2,2) = -0.2647125076088660 + 0.1398480305883365*ima
-      zintvalsex(3,2) = -0.1577499290653270 - 0.1584813163010549*ima
+      zintvalsex(1,2) = 0.0982358058709252d0+0.4825327362729426d0*ima
+      zintvalsex(2,2) = -0.2647125076088660d0+0.1398480305883365d0*ima
+      zintvalsex(3,2) = -0.1577499290653270d0-0.1584813163010549d0*ima
 
       call prin2('zintvalsex=*',zintvalsex(1:3,1:2),12)
       call prin2('zintvals=*',zintvals(1:3,1:2),12)
@@ -102,7 +102,7 @@ c
 
 
 
-      subroutine zlslp(x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,ipars,f)
+      subroutine zldlp(x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,ipars,f)
       implicit real *8 (a-h,o-z)
       real *8 x(6), y(ndtarg),dpars(ndd)
       complex *16 zpars(ndz)
