@@ -1,0 +1,235 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.1' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      8138,        227]
+NotebookOptionsPosition[      7195,        205]
+NotebookOutlinePosition[      7587,        221]
+CellTagsIndexPosition[      7544,        218]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"F", "[", 
+    RowBox[{"t_", ",", "x0_", ",", "y0_", ",", "n_"}], "]"}], " ", "=", 
+   RowBox[{
+    RowBox[{"LegendreP", "[", 
+     RowBox[{"n", ",", "t"}], "]"}], "*", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"Log", "[", 
+       RowBox[{
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"t", "-", "x0"}], ")"}], "^", "2"}], " ", "+", " ", 
+        RowBox[{"y0", "^", "2"}]}], "]"}], "/", "4"}], "/", "Pi"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"N", "[", 
+  RowBox[{
+   RowBox[{"NIntegrate", "[", 
+    RowBox[{
+     RowBox[{"F", "[", 
+      RowBox[{"t", ",", 
+       RowBox[{
+        RowBox[{"-", "1"}], "-", 
+        RowBox[{"1", "/", "10"}]}], ",", 
+       RowBox[{"1", "/", "11"}], ",", "0"}], "]"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"t", ",", 
+       RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+     RowBox[{"WorkingPrecision", "\[Rule]", "32"}], ",", 
+     RowBox[{"PrecisionGoal", "\[Rule]", "16"}], ",", 
+     RowBox[{"Method", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"\"\<GaussKronrodRule\>\"", ",", 
+        RowBox[{"\"\<Points\>\"", "\[Rule]", "20"}]}], "}"}]}]}], "]"}], ",", 
+   "16"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{"N", "[", 
+  RowBox[{
+   RowBox[{"NIntegrate", "[", 
+    RowBox[{
+     RowBox[{"F", "[", 
+      RowBox[{"t", ",", 
+       RowBox[{
+        RowBox[{"-", "1"}], "-", 
+        RowBox[{"1", "/", "10"}]}], ",", 
+       RowBox[{"1", "/", "11"}], ",", "1"}], "]"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"t", ",", 
+       RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+     RowBox[{"WorkingPrecision", "\[Rule]", "32"}], ",", 
+     RowBox[{"PrecisionGoal", "\[Rule]", "16"}], ",", 
+     RowBox[{"Method", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"\"\<GaussKronrodRule\>\"", ",", 
+        RowBox[{"\"\<Points\>\"", "\[Rule]", "20"}]}], "}"}]}]}], "]"}], ",", 
+   "16"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"N", "[", 
+   RowBox[{
+    RowBox[{"NIntegrate", "[", 
+     RowBox[{
+      RowBox[{"F", "[", 
+       RowBox[{"t", ",", 
+        RowBox[{
+         RowBox[{"-", "1"}], "-", 
+         RowBox[{"1", "/", "10"}]}], ",", 
+        RowBox[{"1", "/", "11"}], ",", "2"}], "]"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"t", ",", 
+        RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+      RowBox[{"WorkingPrecision", "\[Rule]", "32"}], ",", 
+      RowBox[{"PrecisionGoal", "\[Rule]", "16"}], ",", 
+      RowBox[{"Method", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{"\"\<GaussKronrodRule\>\"", ",", 
+         RowBox[{"\"\<Points\>\"", "\[Rule]", "20"}]}], "}"}]}]}], "]"}], ",",
+     "16"}], "]"}], "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{"N", "[", 
+  RowBox[{
+   RowBox[{"NIntegrate", "[", 
+    RowBox[{
+     RowBox[{"F", "[", 
+      RowBox[{"t", ",", 
+       RowBox[{"3", "/", "10"}], ",", 
+       RowBox[{
+        RowBox[{"-", "1"}], "/", "20"}], ",", "0"}], "]"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"t", ",", 
+       RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+     RowBox[{"WorkingPrecision", "\[Rule]", "32"}], ",", 
+     RowBox[{"PrecisionGoal", "\[Rule]", "16"}], ",", 
+     RowBox[{"Method", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"\"\<GaussKronrodRule\>\"", ",", 
+        RowBox[{"\"\<Points\>\"", "\[Rule]", "20"}]}], "}"}]}]}], "]"}], ",", 
+   "16"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{"N", "[", 
+  RowBox[{
+   RowBox[{"NIntegrate", "[", 
+    RowBox[{
+     RowBox[{"F", "[", 
+      RowBox[{"t", ",", 
+       RowBox[{"3", "/", "10"}], ",", 
+       RowBox[{
+        RowBox[{"-", "1"}], "/", "20"}], ",", "1"}], "]"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"t", ",", 
+       RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+     RowBox[{"WorkingPrecision", "\[Rule]", "32"}], ",", 
+     RowBox[{"PrecisionGoal", "\[Rule]", "16"}], ",", 
+     RowBox[{"Method", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"\"\<GaussKronrodRule\>\"", ",", 
+        RowBox[{"\"\<Points\>\"", "\[Rule]", "20"}]}], "}"}]}]}], "]"}], ",", 
+   "16"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"N", "[", 
+   RowBox[{
+    RowBox[{"NIntegrate", "[", 
+     RowBox[{
+      RowBox[{"F", "[", 
+       RowBox[{"t", ",", 
+        RowBox[{"3", "/", "10"}], ",", 
+        RowBox[{
+         RowBox[{"-", "1"}], "/", "20"}], ",", "2"}], "]"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"t", ",", 
+        RowBox[{"-", "1"}], ",", "1"}], "}"}], ",", 
+      RowBox[{"WorkingPrecision", "\[Rule]", "32"}], ",", 
+      RowBox[{"PrecisionGoal", "\[Rule]", "16"}], ",", 
+      RowBox[{"Method", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{"\"\<GaussKronrodRule\>\"", ",", 
+         RowBox[{"\"\<Points\>\"", "\[Rule]", "20"}]}], "}"}]}]}], "]"}], ",",
+     "16"}], "]"}], "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{" "}]}], "Input",
+ CellChangeTimes->{{3.829728530016526*^9, 3.829728738387774*^9}, {
+  3.829729039130776*^9, 
+  3.829729058927168*^9}},ExpressionUUID->"622fafae-8379-4776-8370-\
+e786310c1914"],
+
+Cell[BoxData[
+ RowBox[{"-", "0.02812024230649564244142842409090273828`16."}]], "Output",
+ CellChangeTimes->{{3.8297286588846283`*^9, 3.829728693902429*^9}, 
+   3.829728738791292*^9},
+ CellLabel->
+  "(Debug) Out[15]=",ExpressionUUID->"ee97c714-17a3-4d06-85f8-2b280774c456"],
+
+Cell[BoxData["0.11996083468996845800240179754947378726`16."], "Output",
+ CellChangeTimes->{{3.8297286588846283`*^9, 3.829728693902429*^9}, 
+   3.829728738799643*^9},
+ CellLabel->
+  "(Debug) Out[16]=",ExpressionUUID->"775be77e-29b3-41be-967c-6e0cd535ee15"],
+
+Cell[BoxData[
+ RowBox[{"-", "0.02749523721067808250471833172858948547`16."}]], "Output",
+ CellChangeTimes->{{3.8297286588846283`*^9, 3.829728693902429*^9}, 
+   3.8297287388309193`*^9},
+ CellLabel->
+  "(Debug) Out[17]=",ExpressionUUID->"4bf9b211-1aa6-4295-9be4-e40ef143ed7f"],
+
+Cell[BoxData[
+ RowBox[{"-", "0.27919991197983634272063821611989153931`16."}]], "Output",
+ CellChangeTimes->{{3.8297286588846283`*^9, 3.829728693902429*^9}, 
+   3.8297287388320208`*^9},
+ CellLabel->
+  "(Debug) Out[18]=",ExpressionUUID->"bfec6aa9-ba82-4f3a-aed8-ade2df9430cd"],
+
+Cell[BoxData[
+ RowBox[{"-", "0.08532857831208407522710555286990825545`16."}]], "Output",
+ CellChangeTimes->{{3.8297286588846283`*^9, 3.829728693902429*^9}, 
+   3.8297287388397284`*^9},
+ CellLabel->
+  "(Debug) Out[19]=",ExpressionUUID->"4dfc4e6d-8a25-4ca7-903f-4587be6f5cec"],
+
+Cell[BoxData["0.06982115435807171046366988649473127425`16."], "Output",
+ CellChangeTimes->{{3.8297286588846283`*^9, 3.829728693902429*^9}, 
+   3.8297287388590593`*^9},
+ CellLabel->
+  "(Debug) Out[20]=",ExpressionUUID->"fccb7c72-1bed-475b-81ba-3c55b59473e1"]
+}, Open  ]]
+},
+WindowSize->{720, 796},
+WindowMargins->{{Automatic, 0}, {Automatic, 0}},
+FrontEndVersion->"12.1 for Mac OS X x86 (64-bit) (March 18, 2020)",
+StyleDefinitions->"Default.nb",
+ExpressionUUID->"ece70c8f-c6dd-4ae5-9a99-238b555cc5c9"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 4975, 140, 346, "Input",ExpressionUUID->"622fafae-8379-4776-8370-e786310c1914"],
+Cell[5558, 164, 272, 5, 45, "Output",ExpressionUUID->"ee97c714-17a3-4d06-85f8-2b280774c456"],
+Cell[5833, 171, 255, 4, 45, "Output",ExpressionUUID->"775be77e-29b3-41be-967c-6e0cd535ee15"],
+Cell[6091, 177, 274, 5, 45, "Output",ExpressionUUID->"4bf9b211-1aa6-4295-9be4-e40ef143ed7f"],
+Cell[6368, 184, 274, 5, 45, "Output",ExpressionUUID->"bfec6aa9-ba82-4f3a-aed8-ade2df9430cd"],
+Cell[6645, 191, 274, 5, 45, "Output",ExpressionUUID->"4dfc4e6d-8a25-4ca7-903f-4587be6f5cec"],
+Cell[6922, 198, 257, 4, 45, "Output",ExpressionUUID->"fccb7c72-1bed-475b-81ba-3c55b59473e1"]
+}, Open  ]]
+}
+]
+*)
+

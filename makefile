@@ -88,7 +88,7 @@ QOBJS = $(QUAD)/near_field_routs.o
 
 # Chunk adaptive integration routines
 CHUNK = src/chunk_routs
-COBJS = $(CHUNK)/dchunkints_main.o
+COBJS = $(CHUNK)/dchunkints_main.o $(CHUNK)/zchunkints_main.o
 
 
 OBJS = $(COMOBJS) $(SOBJS) $(COBJS) $(QOBJS) 
@@ -164,8 +164,8 @@ install: $(STATICLIB) $(DYNAMICLIB)
 #
 test: $(STATICLIB) test/curv test/chunk test/quad
 #	cd test/curve_routs; ./int2-curv
-#	cd test/chunk_routs; ./int2-chunk
-	cd test/quadratures; ./int2-quad
+	cd test/chunk_routs; ./int2-chunk
+#	cd test/quadratures; ./int2-quad
 #	cat print_testres.txt
 #	rm print_testres.txt
 
@@ -173,7 +173,7 @@ test/curv:
 	$(FC) $(FFLAGS) test/curve_routs/test_curve_routs.f -o test/curve_routs/int2-curv lib-static/$(STATICLIB) $(LIBS)
 
 test/chunk:
-	$(FC) $(FFLAGS) test/chunk_routs/test_dchunkints.f -o test/chunk_routs/int2-chunk lib-static/$(STATICLIB) $(LIBS)
+	$(FC) $(FFLAGS) test/chunk_routs/test_zchunkints.f -o test/chunk_routs/int2-chunk lib-static/$(STATICLIB) $(LIBS)
 
 test/quad:
 	$(FC) $(FFLAGS) test/quadratures/test_near_field_routs.f -o test/quadratures/int2-quad lib-static/$(STATICLIB) $(LIBS)
