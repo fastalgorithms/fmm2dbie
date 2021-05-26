@@ -243,7 +243,7 @@ cc       tree variables
 c 
        real *8, allocatable :: centers(:,:),boxsize(:),targs(:,:)
        integer, allocatable :: itree(:)
-       integer *8 ipointer(8), ltree
+       integer ipointer(8), ltree
        integer, allocatable :: ilevel(:)
        integer, allocatable :: nlist1(:),list1(:,:)
        integer, allocatable :: nlist2(:),list2(:,:)
@@ -287,7 +287,7 @@ C$OMP END PARALLEL DO
        mnbors = 9
 
        call pts_tree_mem(xys,ns,targs,nt,idivflag,ndiv,nlmin,nlmax,
-     1  ifunif,iper,nlevels,nboxes,ltree) 
+     1  ifunif,iper,nlevels,nboxes,ltree)
 
        allocate(centers(2,nboxes),itree(ltree),boxsize(0:nlevels))
 
@@ -315,7 +315,7 @@ c
 
       isep = 1
       
-      call computemnlists(nlevels,nboxes,itree,ltree,iptr,centers,
+      call computemnlists(nlevels,nboxes,itree,ltree,ipointer,centers,
      1  boxsize,iper,mnlist1,mnlist2,mnlist3,mnlist4)
       
       allocate(list1(mnlist1,nboxes),nlist1(nboxes))
@@ -323,7 +323,7 @@ c
       allocate(list3(mnlist3,nboxes),nlist3(nboxes))
       allocate(list4(mnlist4,nboxes),nlist4(nboxes))
 
-      call computelists(nlevels,nboxes,itree,ltree,iptr,centers,
+      call computelists(nlevels,nboxes,itree,ltree,ipointer,centers,
      1  boxsize,iper,mnlist1,nlist1,list1,mnlist2,nlist2,list2,
      2  mnlist3,nlist3,list3,mnlist4,nlist4,list4)
 
@@ -460,7 +460,7 @@ cc       tree variables
 c 
        real *8, allocatable :: centers(:,:),boxsize(:),targs(:,:)
        integer, allocatable :: itree(:)
-       integer *8 ipointer(8), ltree
+       integer ipointer(8), ltree
        integer, allocatable :: ilevel(:)
        integer, allocatable :: nlist1(:),list1(:,:)
        integer, allocatable :: nlist2(:),list2(:,:)
@@ -536,7 +536,7 @@ c
       isep = 1
 
       
-      call computemnlists(nlevels,nboxes,itree,ltree,iptr,centers,
+      call computemnlists(nlevels,nboxes,itree,ltree,ipointer,centers,
      1  boxsize,iper,mnlist1,mnlist2,mnlist3,mnlist4)
       
       allocate(list1(mnlist1,nboxes),nlist1(nboxes))
@@ -544,7 +544,7 @@ c
       allocate(list3(mnlist3,nboxes),nlist3(nboxes))
       allocate(list4(mnlist4,nboxes),nlist4(nboxes))
 
-      call computelists(nlevels,nboxes,itree,ltree,iptr,centers,
+      call computelists(nlevels,nboxes,itree,ltree,ipointer,centers,
      1  boxsize,iper,mnlist1,nlist1,list1,mnlist2,nlist2,list2,
      2  mnlist3,nlist3,list3,mnlist4,nlist4,list4)
 
