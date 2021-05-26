@@ -392,6 +392,7 @@ subroutine dgausselim_vec(n, a, k, rhs, info, sol, dcond)
   
   integer, allocatable :: ipiv(:), iwork(:)
   double precision, allocatable :: af(:,:), rscales(:), cscales(:), work(:)
+  double precision, allocatable :: ferr(:),berr(:)
   character *1 :: fact, trans, equed
   !
   ! This a wrapper for double precision Gaussian elimination in
@@ -405,6 +406,7 @@ subroutine dgausselim_vec(n, a, k, rhs, info, sol, dcond)
   allocate(cscales(n))
   allocate(work(5*n))
   allocate(iwork(n))
+  allocate(ferr(k),berr(k))
   
   fact = 'N'
   trans = 'N'

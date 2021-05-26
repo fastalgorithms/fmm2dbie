@@ -1,6 +1,8 @@
 *.o
 int2*
-*.dat
+*.dat*
 plot*.py
 fort.*
+*.a
+*.so
 

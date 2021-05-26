@@ -37,7 +37,7 @@ DYNAMICLIB = $(LIBNAME).so
 STATICLIB = $(LIBNAME).a
 LIMPLIB = $(DYNAMICLIB)
 
-LFMMLINKLIB = 
+LFMMLINKLIB = -lfmm2d 
 LLINKLIB = -lfmm2dbie
 
 
@@ -75,13 +75,23 @@ COMOBJS = $(COM)/hkrand.o \
 	$(COM)/dlaran.o $(COM)/lapack_wrap.o \
 	$(COM)/legeexps.o $(COM)/prini_new.o \
 	$(COM)/hkrand.o $(COM)/pyplot.o \
+	$(COM)/lapack_wrap.o $(COM)/sort.o \
+	$(COM)/sparse_reps.o
 
 # Surface wrappers
 SURF = src/curve_routs
-SOBJS = $(SURF)/chunks.o 
+SOBJS = $(SURF)/chunks.o
+
+# Quadrature wrappers
+QUAD = src/quadratures
+QOBJS = $(QUAD)/near_field_routs.o
+
+# Chunk adaptive integration routines
+CHUNK = src/chunk_routs
+COBJS = $(CHUNK)/dchunkints_main.o
 
 
-OBJS = $(COMOBJS) $(SOBJS) 
+OBJS = $(COMOBJS) $(SOBJS) $(COBJS) $(QOBJS) 
 
 
 
@@ -152,13 +162,22 @@ install: $(STATICLIB) $(DYNAMICLIB)
 #
 # testing routines
 #
-test: $(STATICLIB) test/curv 
-	cd test/curve_routs; ./int2-curv
+test: $(STATICLIB) test/curv test/chunk test/quad
+#	cd test/curve_routs; ./int2-curv
+#	cd test/chunk_routs; ./int2-chunk
+	cd test/quadratures; ./int2-quad
 #	cat print_testres.txt
 #	rm print_testres.txt
 
 test/curv:
-	$(FC) $(FFLAGS) test/curve_routs/test_curve_routs.f -o test/curve_routs/int2-curv lib-static/$(STATICLIB) $(LIBS) 
+	$(FC) $(FFLAGS) test/curve_routs/test_curve_routs.f -o test/curve_routs/int2-curv lib-static/$(STATICLIB) $(LIBS)
+
+test/chunk:
+	$(FC) $(FFLAGS) test/chunk_routs/test_dchunkints.f -o test/chunk_routs/int2-chunk lib-static/$(STATICLIB) $(LIBS)
+
+test/quad:
+	$(FC) $(FFLAGS) test/quadratures/test_near_field_routs.f -o test/quadratures/int2-quad lib-static/$(STATICLIB) $(LIBS)
+
 
 #
 # housekeeping routines
@@ -166,7 +185,11 @@ test/curv:
 clean: objclean
 	rm -f lib-static/*.a lib/*.so
 	rm -f test/curve_routs/int2-curv
+	rm -f test/chunk_routs/int2-chunk
+	rm -f test/quadratures/int2-quad
 
 objclean: 
 	rm -f $(OBJS) 
-	rm -f test/curve_routs/*.o 
+	rm -f test/curve_routs/*.o
+	rm -f test/chunk_routs/*.o
+	rm -f test/quadratures/*.o

@@ -18,6 +18,9 @@ c         with its derivative) at the user-provided point
 c 
 c   legepols - evaluates a bunch of Legendre polynomials
 c         at the user-provided point
+c
+c   lege_init
+c  
 c   legepls2 - an accelerated version of legepols, evaluating a
 c         Legendre polynomials at the user-provided point; maximum
 c         order of the polynomials to be evaluated is 290

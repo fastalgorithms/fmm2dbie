@@ -26,8 +26,8 @@
       pi = atan(done)*4
 
 
-      nchmax = 20000
-      k = 12
+      nchmax = 200000
+      k = 14
       npts_max = nchmax*k
       allocate(srcvals(8,npts_max),srccoefs(6,npts_max),ab(2,nchmax))
       allocate(norders(nchmax),ixys(nchmax+1),iptype(nchmax))
@@ -36,8 +36,8 @@
       irefinel = 0
       irefiner = 0
       rlmax = 1.0d10
-      ta = 0
-      tb = 2*pi
+      ta = -pi
+      tb = pi
       ifclosed = 1
       rlmaxe = 0
 
@@ -48,11 +48,11 @@
       dpars(1) = 1.0d0
       dpars(2) = 0.5d0
 
-      ipars(1) = 60
+      ipars(1) = 30
       nover = 1
       nch = 0
       ier = 0
-      eps = 1.0d-5
+      eps = 1.0d-13
       call chunkfunc_guru(eps,rlmax,ifclosed,irefinel,irefiner,rlmaxe,
      1  ta,tb,fstarn_simple,ndd,dpars,ndz,zpars,ndi,ipars,nover,
      2  k,nchmax,nch,norders,ixys,iptype,npts,srcvals,srccoefs,ab,adjs,
@@ -106,7 +106,8 @@ c
       implicit real *8 (a-h,o-z)
       real *8 dpars(2)
       integer ipars
-      complex *16 zpars
+      complex *16 zpars,z,zd,zd2,zexp,ima,ze1,ze2,ze3
+      data ima/(0.0d0,1.0d0)/
 
       rsc = 1.0d0
 
@@ -115,8 +116,10 @@ c
       r2 = dpars(2)*rsc
 
       r = r1 + r2*cos(n*t)
-      drdt = -r2*n*sin(n*t)
-      d2rdt2 = -r2*n*n*cos(n*t)
+
+
+      drdt = -r2*(n+0.0d0)*sin(n*t)
+      d2rdt2 = -r2*(n+0.0d0)*(n+0.0d0)*cos(n*t)
 
       x = r*cos(t)
       y = r*sin(t)
@@ -127,6 +130,25 @@ c
       dxdt2 = d2rdt2*cos(t) - 2*drdt*sin(t) - r*cos(t) 
       dydt2 = d2rdt2*sin(t) + 2*drdt*cos(t) - r*sin(t) 
       
+      z = (r1 + r2*cos((n+0.0d0)*t))*exp(ima*t)
+      zd = -(n+0.0d0)*r2*sin((n+0.0d0)*t)*exp(ima*t) + ima*z
+      zd2 = ima*zd - (n+0.0d0)**2*r2*cos((n+0.0d0)*t)*exp(ima*t) -
+     1    ima*(n+0.0d0)*r2*sin((n+0.0d0)*t)*exp(ima*t)
+      ze1 = exp(ima*t)
+      ze2 = exp(ima*t*(n+1))
+      ze3 = exp(ima*t*(-n+1))
+      z = r1*ze1 + 0.5d0*r2*(ze2+ze3)
+      zd = ima*(r1*ze1 + 0.5d0*r2*(n+1)*ze2 + 0.5d0*r2*(-n+1)*ze3)
+      zd2 = -(r1*ze1 + 0.5d0*r2*(n+1)**2*ze2 + 0.5d0*r2*(-n+1)**2*ze3)
+      
+      x = real(z)
+      y = imag(z)
+      dxdt = real(zd)
+      dydt = imag(zd)
+      dxdt2 = real(zd2)
+      dydt2 = imag(zd2)
+
+
       return
       end
 

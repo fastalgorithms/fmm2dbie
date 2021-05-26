@@ -22,8 +22,6 @@
 !             does, calculates the arclength between
 !             two specified points (in parameterization space)
 !
-!  chunkwhts - returns smooth quadrature weights for every
-!             point on the curve
 !
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 !
@@ -55,19 +53,19 @@
 !  The third condition is to allow dyadic refinement of the discretization
 !  at the end points which might be necessary for regions with corners
 !  or open arcs
+!  The routine will declare a chunk to be resolved
+!  if the relative l2 error on the chunk for the g = curvature^2*dsdt
+!  satisfies |g - ginterp|*(rlpan)/(1+|g-ginterp|*sqrt(rlpan)) \leq 
+!  eps_test
+!  and the relative l2 error for dsdt on the chunk is \leq eps_test
 !
-!  The routine will declare a chunk to be resolved when
-!  the tail coefficients of 
-!  x,y,dx/dt,dy/dt,dxdt2,dydt2, and dsdt = sqrt(ders(1,)**2 + ders(2,)**2)
-!  have rmse less than eps*sqrt{rlch}/sqrt{rcurve}
+!  here eps_test is determined based on the user described tolerance
+!  eps and the conditioning of the problem. It is given by
+!  \eps_test = max(eps,2^(-48)*(1+|kmax|)(1+|kmin|)
+!  where kmax and kmin are the maximum and minimum absolute values
+!  of the curvature
 !
-!  where rlch is the length of chunk, and rcurve is the length of the curve
-!
-!  if(k.ge.12) then the tail coeffcients are estimated using the last 
-!  3 + k/12 coeffs of the expansion
-!
-!  if(k.lt.12) then the tail coefficients are estimated using a length
-!  k+3 expansion and we measure the l2 error in the last three coeffs
+!  and (rlpan) above is the length of the panel
 !
 !  NOTE: the routine returns chunks that are at most a factor
 !   of two different in archlength than adjacent chunks
@@ -172,7 +170,7 @@
 !  
       integer, allocatable :: ifprocess(:)
       real *8, allocatable :: xs(:),ws(:),u(:,:),v(:,:)
-      real *8, allocatable :: xs2(:),ws2(:),u2(:,:),v2(:,:)
+      real *8, allocatable :: xs2(:),ws2(:),u2(:,:),v2(:,:),ttest(:)
       real *8, allocatable :: fvals(:,:),finterp(:,:),ximat(:,:)
       real *8, allocatable :: finterpex(:,:),work(:),curv(:)
       real *8 rints(4),rints0(4),rinttmp(4),errs(4),errs0(4),epsuse
@@ -202,6 +200,13 @@
       itype=2
       call legeexps(itype,k,xs,u,v,ws)
       call legeexps(itype,kuse,xs2,u2,v2,ws2)
+
+      allocate(ttest(k))
+      do i=1,k
+        ttest(i) = -1.0d0 + 2.0d0*(i-1.0d0)/(k-1.0d0)
+      enddo
+      call prin2('ttest=*',ttest,k)
+
   
       
 
@@ -217,10 +222,28 @@
       nchnew=nch
 
       allocate(fvals(2,k))
-      allocate(finterpex(2,kuse),finterp(2,kuse),ximat(kuse,k))
+      allocate(finterpex(2,k),finterp(2,k),ximat(k,k))
       lw = 2*k**2 + k+100
       allocate(work(lw))
-      call lematrin(k,kuse,xs2,ximat,xs,work)
+      call lematrin(k,k,ttest,ximat,xs,work)
+      call interpmat_1d_hels(k,ttest,xs,ximat)
+
+      ifread = 0
+      if(ifread.eq.1) then
+
+        open(unit=33,file='ximat.dat')
+        do i=1,k
+          do j=1,k
+            read(33,*) ximat(j,i)
+          enddo
+        enddo
+        close(33)
+      endif
+
+
+
+      call prin2_long('ximat=*',ximat(1:3,1:3),9)
+      call prin2_long('xs=*',xs,k)
       
       
       
@@ -248,11 +271,11 @@
       beta = 0.0d0
 
  1311 format(2x,i1,2x,i4,5(2x,e11.5))
-      maxiter=10000
+      maxiter=52
       do ijk = 1,maxiter
         rlcurve = rlcurve0
-        epsuse = max(eps,2.0d0**(-51)*rkmax/rkmin*10)
-!        print *, ijk,rlcurve,rkmax,rkmin,epsuse,2.0d0**(-51)*rkmax/rkmin*10
+        epsuse = max(eps,2.0d0**(-48)*rkmax/rkmin)
+        epsuse = eps
 !        read *, i
 !
 !     loop through all existing chunks, if resolved store, if not split
@@ -265,51 +288,72 @@
 !
           a=ab(1,ich)
           b=ab(2,ich)
+          iprint = 0
+
+!          if(ijk.eq.11.and.ich.eq.368) then
+!            iprint = 1
+!            print *, ich,a,b
+!            a = a - 2*pi
+!            b = b - 2*pi
+!          endif
 
 !
+          rlpan = 0
           do i=1,k
-            t=a+(b-a)*(xs(i)+1)/2
+            t=a+(b-a)*(1+xs(i))/2
             call funcurve(t,ndd,dpars,ndz,zpars,ndi,ipars, &
             x,y,dx,dy,dx2,dy2)
 
             fvals(1,i) = sqrt(dx**2 + dy**2)
             zd = dx + ima*dy
             zd2 = dx2 + ima*dy2
-            fvals(2,i) = imag(zd2/zd)**2/fvals(1,i) 
+            fvals(2,i) = dimag(zd2*dconjg(zd))**2/abs(zd)**5 
+            rlpan = rlpan + fvals(1,i)*ws(i)*(b-a)/2
             
           enddo
 
-          rlpan = 0
-          do i=1,kuse
-            t = a+(b-a)*(xs2(i)+1)/2
+          do i=1,k
+            t = a+(b-a)*(1+ttest(i))/2
             call funcurve(t,ndd,dpars,ndz,zpars,ndi,ipars, &
               x,y,dx,dy,dx2,dy2)
 
             finterpex(1,i) = sqrt(dx**2 + dy**2)
             zd = dx + ima*dy
             zd2 = dx2 + ima*dy2
-            finterpex(2,i) = imag(zd2/zd)**2/finterpex(1,i)
+            finterpex(2,i) = dimag(zd2*dconjg(zd))**2/abs(zd)**5
             rk = abs(imag(zd2/zd)/finterpex(1,i))+1
             if(rk.gt.rkmax) rkmax = rk
             if(rk.lt.rkmin) rkmin = rk
             
-            rlpan = rlpan + finterpex(1,i)*ws2(i)*(b-a)/2
           enddo
 
-          call dgemm('n','t',2,kuse,k,alpha,fvals,2,ximat,kuse, &
+          if(iprint.eq.1) then
+!            call prin2_long('finterp=*',finterp,2*k)
+!            call prin2_long('finterpex=*',finterpex,2*k)
+          endif
+
+          call dgemm('n','t',2,k,k,alpha,fvals,2,ximat,k, &
               beta,finterp,2)
-          err1 = 0
-          err2 = 0
+
+          err1a = 0
+          err2a = 0
+          err1r = 0
+          err2r = 0
           r1 = 0
           r2 = 0
-          do i=1,kuse
-            err1 = err1 + (finterp(1,i)-finterpex(1,i))**2
-            r1 = r1 + finterpex(1,i)**2
-            err2 = err2 + (finterp(2,i)-finterpex(2,i))**2
-            r2 = r2 + finterpex(2,i)**2
+          do i=1,k
+            err1 = abs(finterp(1,i)-finterpex(1,i))
+            if(err1.gt.err1a) err1a = err1
+            err2 = abs(finterp(2,i)-finterpex(2,i))
+            if(err2.gt.err2a) err2a = err2
+            r1 = r1 + abs(finterpex(1,i))
+            r2 = r2 + abs(finterpex(2,i))
           enddo
-          err1 = sqrt(err1/r1)
-          err2 = sqrt(err2)*rlpan/(1.0d0+sqrt(r2)*rlpan)
+          err1r = err1a/r1
+          err2r = err2a/r2
+
+          err1 = min(err1a,err1r)
+          err2 = min(err2a,err2r)
 
 !            
 !
@@ -327,13 +371,14 @@
 !
 !
           rmsemax = 0.0d0
+
           if(err1.gt.epsuse) then
-!            print *, "1,",ich,err1,rlcurve,rlpan
+!            if(iprint.eq.1) print *, "1,",ich,err1,rlpan,err1a,err1r
             goto 2800
           endif
 
           if(err2.gt.epsuse) then
-!            print *, "2",ich,err2,rlpan
+!            if(iprint.eq.1) print *, "2",ich,err2,rlpan,err2a,err2r
             goto 2800
           endif
 
@@ -408,10 +453,11 @@
 !
         if ((ifdone .eq. 1) .and. (nchnew .eq. nch)) goto 5100
         nchnew=nch
+!        print *, ijk,rlcurve,rkmax,rkmin,epsuse,2.0d0**(-51)*rkmax/rkmin*10
       enddo
 !
  5100 continue
-!      read *, i
+      call prinf('nch=*',nch,1)
 !
 !       the curve should be resolved to precision eps now on
 !       each interval ab(,i)
@@ -692,6 +738,7 @@
           if(adjs(1,i).lt.0) ich = i
         enddo
       endif
+      
 
 !
 !      up to here, everything has been done in parameter space, [ta,tb]
@@ -991,5 +1038,44 @@
 !
 !
 !
+      subroutine interpmat_1d_hels(k,x1,x2,ximat)
+      implicit real *8 (a-h,o-z)
+      real *8 x1(k),x2(k),ximat(k,k),vmat_trans(k,k),rmat_trans(k,k)
+      real *8 ximat_trans(k,k)
       
+      vmat_trans = 1.0d0
+      rmat_trans = 1.0d0
+      do j=2,k
+        do i=1,k
+          vmat_trans(j,i) = vmat_trans(j-1,i)*x2(i)
+          rmat_trans(j,i) = rmat_trans(j-1,i)*x1(i)
+        enddo
+      enddo
+
+      open(unit=35,file='vrmats.dat')
+      do i=1,k
+        do j=1,k
+          write(35,*) vmat_trans(j,i),rmat_trans(j,i)
+        enddo
+      enddo
+      close(35)
+
+      call prin2('vmat_trans=*',vmat_trans,24)
+      call prin2('rmat_trans=*',rmat_trans,24)
+
+      info = 0
+
+      call dgausselim_vec(k,vmat_trans,k,rmat_trans,info,ximat_trans, &
+        dcond)
+      call prinf('here*',i,0)
+      
+      do i=1,k
+        do j=1,k
+          ximat(i,j) = ximat_trans(j,i)
+        enddo
+      enddo
+
+
+      return
+      end
   
