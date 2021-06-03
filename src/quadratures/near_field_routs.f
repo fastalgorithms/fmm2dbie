@@ -733,7 +733,7 @@ c
 c
 c
 c-----------------------------------------------------------
-      subroutine get_iquad_rsc(npatches,ixys,npts,nnz,row_ptr,
+      subroutine get_iquad_rsc2d(npatches,ixys,npts,nnz,row_ptr,
      1    col_ind,iquad)
 c
 c       given an row sparse compressed format from targets

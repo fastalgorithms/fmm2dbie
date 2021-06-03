@@ -1,3 +1,5 @@
+      subroutine test_near_field_routs(isuc)     
+ 
       implicit real *8 (a-h,o-z)
       real *8, allocatable :: src(:,:),targ(:,:),rads(:)
       integer, allocatable :: row_ptr(:),row_ptr2(:)
@@ -74,11 +76,10 @@
 
       isuc = i1 + i2
       write(*,'(a,i1,a,i1,a)') 'Successfully completed ',isuc,
-     1   ' out of ',ntests,' tests'
+     1   ' out of ',ntests,' tests in near field routs'
 
       
 
 
-
-      stop
+      return
       end

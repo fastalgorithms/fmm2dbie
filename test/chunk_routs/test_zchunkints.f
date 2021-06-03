@@ -1,3 +1,5 @@
+      subroutine test_zchunkints(isuc)
+
       implicit real *8 (a-h,o-z)
       real *8, allocatable :: ts(:),wts(:),umat(:,:),vmat(:,:)
       real *8, allocatable :: srcvals(:,:),srccoefs(:,:)
@@ -95,6 +97,9 @@ c
       enddo
       erra = sqrt(erra/ra)
       call prin2('error in computing integrals=*',erra,1)
+
+      isuc = 0
+      if(abs(erra).lt.eps) isuc = 1
 
       return
       end

@@ -127,6 +127,7 @@ c-----------------------------------
      1     nporder,fker,ndd,dpars,ndz,zpars,ndi,ipars,nqorder,ts0,w0,
      2     vals,nnmax,eps,dintvals(1,i),maxdepth,maxrec,numit,value2,
      3     value3)
+        print *, i,numit
       enddo
 
       return
@@ -260,7 +261,7 @@ c
       ier=0
       maxrec=0
       do 3000 i=1,nnmax
-        numint=i
+        numit=i
         if(j .gt. maxrec) maxrec=j
 c 
 c       subdivide the current subinterval

@@ -1,3 +1,5 @@
+      subroutine test_dchunkints(isuc)
+
       implicit real *8 (a-h,o-z)
       real *8, allocatable :: ts(:),wts(:),umat(:,:),vmat(:,:)
       real *8, allocatable :: srcvals(:,:),srccoefs(:,:)
@@ -59,13 +61,13 @@ c
       xytarg(1,2) = 0.3d0 + xshift
       xytarg(2,2) = -1.0d0/20.0d0 + yshift
 
-      eps = 1.0d-7
+      eps = 1.0d-12
       ndtarg = 2
       ndd = 0
       ndz = 0
       ndi = 0
       nporder = 3
-      nqorder = 26
+      nqorder = 12
       nchmax = 100000
       allocate(dintvals(nporder,ntarg),dintvalsex(nporder,ntarg))
 
@@ -94,6 +96,8 @@ c
       enddo
       erra = sqrt(erra/ra)
       call prin2('error in computing integrals=*',erra,1)
+      isuc = 0
+      if(abs(erra).lt.eps) isuc = 1
 
       return
       end

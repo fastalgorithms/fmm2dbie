@@ -120,6 +120,7 @@ c-----------------------------------
      1     nporder,fker,ndd,dpars,ndz,zpars,ndi,ipars,nqorder,ts0,w0,
      2     vals,nnmax,eps,zintvals(1,i),maxdepth,maxrec,numit,value2,
      3     value3)
+        print *, i,numit
       enddo
 
       return
@@ -131,7 +132,7 @@ c
 c
       subroutine zadinrecm(ier,stack,a,b,k,srccoefs,ndt,targ,np,fker,
      1   ndd,dpars,ndz,zpars,ndi,ipars,m,ts0,w0,vals,nnmax,
-     2   eps,zints,maxdepth,maxrec,numit,value2,value3)
+     2   eps,zints,maxdepth,maxrec,numint,value2,value3)
 c
 c 
 c  This subroutine computes the integrals 
@@ -253,6 +254,7 @@ c
       ier=0
       maxrec=0
       do 3000 i=1,nnmax
+
         numint=i
         if(j .gt. maxrec) maxrec=j
 c 
@@ -265,10 +267,12 @@ c
      1      dpars,ndz,zpars,ndi,ipars,m,ts0,w0,value3)
 c 
           dd=0
+
           do jj=1,np
             ddd=abs(value2(jj)+value3(jj)-vals(jj,j) )
             if(ddd .gt. dd) dd=ddd
           enddo
+          print *, dd,stack(1,j),stack(2,j)
 c 
           ifdone=0
           if(dd .le. eps) ifdone=1

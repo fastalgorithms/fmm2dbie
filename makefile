@@ -84,7 +84,7 @@ SOBJS = $(SURF)/chunks.o
 
 # Quadrature wrappers
 QUAD = src/quadratures
-QOBJS = $(QUAD)/near_field_routs.o
+QOBJS = $(QUAD)/near_field_routs.o $(QUAD)/adap_quads.o $(QUAD)/self_quads2d.o
 
 # Chunk adaptive integration routines
 CHUNK = src/chunk_routs
@@ -165,18 +165,23 @@ install: $(STATICLIB) $(DYNAMICLIB)
 test: $(STATICLIB) test/curv test/chunk test/quad
 #	cd test/curve_routs; ./int2-curv
 	cd test/chunk_routs; ./int2-chunk
-#	cd test/quadratures; ./int2-quad
-#	cat print_testres.txt
-#	rm print_testres.txt
+	cd test/quadratures; ./int2-quad
+	cat print_testres.txt
+	rm print_testres.txt
+
 
 test/curv:
 	$(FC) $(FFLAGS) test/curve_routs/test_curve_routs.f -o test/curve_routs/int2-curv lib-static/$(STATICLIB) $(LIBS)
 
-test/chunk:
-	$(FC) $(FFLAGS) test/chunk_routs/test_zchunkints.f -o test/chunk_routs/int2-chunk lib-static/$(STATICLIB) $(LIBS)
+CTOBJS = test/chunk_routs/test_dchunkints.o test/chunk_routs/test_zchunkints.o
 
-test/quad:
-	$(FC) $(FFLAGS) test/quadratures/test_near_field_routs.f -o test/quadratures/int2-quad lib-static/$(STATICLIB) $(LIBS)
+test/chunk: $(CTOBJS)
+	$(FC) $(FFLAGS) test/chunk_routs/test_chunk_routs.f -o test/chunk_routs/int2-chunk $(CTOBJS) lib-static/$(STATICLIB) $(LIBS)
+
+QTOBJS = test/quadratures/test_near_field_routs.o test/quadratures/test_self_adap.o
+
+test/quad: $(QTOBJS)
+	$(FC) $(FFLAGS) test/quadratures/test_quadratures.f -o test/quadratures/int2-quad $(QTOBJS) lib-static/$(STATICLIB) $(LIBS)
 
 
 #
