@@ -67,8 +67,8 @@ subroutine get_centroid_rads2d(nch,norders,ixys,iptype,npts,srccoefs, &
 
   do i=1,nch
     if(iptype(i).eq.1) then
-      call get_centroid_rads2d_lege(norders(i),srccoefs(1,ixys(i)),
-        cms(i),rads(i))
+      call get_centroid_rads2d_lege(norders(i),srccoefs(1,ixys(i)), &
+        srcvals(1,ixys(i)),cms(1,i),rads(i))
     endif
   enddo
 
@@ -155,7 +155,7 @@ end subroutine get_centroid_rads2d_lege
 !
 
 
-subroutine oversample_geom2d(nch,norders,ixys,iptype,npts,srccoefs,
+subroutine oversample_geom2d(nch,norders,ixys,iptype,npts,srccoefs, &
   srcvals,nfars,ixyso,nptso,srcover)
 !
 !  This subroutine oversamples geometry information
@@ -216,6 +216,7 @@ subroutine oversample_geom2d(nch,norders,ixys,iptype,npts,srccoefs,
 
   integer i,istart,istarto,j,jpt,npols,l,n1,n2,ipt,i1,i2
   integer itype
+  real *8 rr
 
   transa = 'n'
   transb = 'n'
@@ -225,7 +226,7 @@ subroutine oversample_geom2d(nch,norders,ixys,iptype,npts,srccoefs,
     nfar = nfars(i)
     norder = norders(i)
     if(nfar.ne.norder) then
-      if(iptype.eq.1) then
+      if(iptype(i).eq.1) then
         allocate(ts(nfar),pmat(norder,nfar))
         itype = 0
         call legeexps(itype,nfar,ts,umat,vmat,wts)
@@ -244,7 +245,7 @@ subroutine oversample_geom2d(nch,norders,ixys,iptype,npts,srccoefs,
         srcover(7,jpt) = srcover(4,jpt)/rr
         srcover(8,jpt) = -srcover(3,jpt)/rr
       enddo
-      if(iptype.eq.1) then
+      if(iptype(i).eq.1) then
         n1 = mod(norder,2)
         n2 = mod(nfar,2)
         if(n1.eq.1.and.n2.eq.1) then
@@ -263,7 +264,7 @@ subroutine oversample_geom2d(nch,norders,ixys,iptype,npts,srccoefs,
       istarto = ixyso(i)
       npols = ixys(i+1)-ixys(i)
       do j=1,npols
-        do l=1,12
+        do l=1,8
           srcover(l,j+istarto-1) = srcvals(l,j+istart-1)
         enddo
       enddo
@@ -276,7 +277,7 @@ end subroutine oversample_geom2d
 !
 !
 !
-subroutine oversample_fun_curv2d(nd,nch,norders,ixys,iptype,npts,
+subroutine oversample_fun_curv2d(nd,nch,norders,ixys,iptype,npts, &
   u,nfars,ixyso,nptso,uover)
 !
 !  This subroutine oversamples a collection of functions 
@@ -325,9 +326,9 @@ subroutine oversample_fun_curv2d(nd,nch,norders,ixys,iptype,npts,
     npols = ixys(i+1) - ixys(i)
     istarto = ixyso(i)
     npolso = ixyso(i+1) - ixyso(i)
-    if(iptype.eq.1) &
+    if(iptype(i).eq.1) &
       call oversample_fun_lege(nd,norders(i),u(1,istart),nfars(i),&
-        uover(nd,istarto))
+        uover(1,istarto))
   enddo
 
 end subroutine oversample_fun_curv2d
@@ -336,7 +337,7 @@ end subroutine oversample_fun_curv2d
 !
 !
 !
-subroutine oversample_fun_lege(nd,norder,u,nfar,uover)
+subroutine oversample_fun_lege(nd,norder,u,nover,uover)
 !
 !  This subroutine oversamples a collection of functions
 !  defined on [-1,1] sampled at legendre nodes
@@ -348,32 +349,31 @@ subroutine oversample_fun_lege(nd,norder,u,nfar,uover)
 !        order of discretization 
 !    - u: real *8 (nd,norder)
 !        function values at discretization nodes
-!    - nfar: integer
+!    - nover: integer
 !        oversampled order of discretization 
 !
 !  Output arguments       
-!    - uover: real *8 (nd,nfar)
+!    - uover: real *8 (nd,nover)
 !        oversampled function values
 !--------------------------        
   implicit none
-  integer, intent(in) :: nd,norder,nfar
+  integer, intent(in) :: nd,norder,nover
   real *8, intent(in) :: u(nd,norder)
-  real *8, intent(out) :: ufar(nd,nover)
+  real *8, intent(out) :: uover(nd,nover)
 
   real *8, allocatable :: pmat(:,:),pols(:),ucoefs(:,:)
-  real *8, allocatable :: ts(:),umat,vmat,wts
   real *8 ts0(norder),umat0(norder,norder),vmat0(norder,norder)
   real *8 wts0(norder)
-  real *8 ts(nfar),umat,vmat,wts
+  real *8 ts(nover),umat,vmat,wts
   character *1 transa,transb
   real *8 alpha,beta
-  integer itype
+  integer itype,i
 
   itype = 2
   call legeexps(itype,norder,ts0,umat0,vmat0,wts0)
 
   itype = 0
-  call legeexps(itype,nfar,ts,umat,vmat,wts)
+  call legeexps(itype,nover,ts,umat,vmat,wts)
   allocate(ucoefs(nd,norder))
 
   transa = 'n'
@@ -383,14 +383,14 @@ subroutine oversample_fun_lege(nd,norder,u,nfar,uover)
   call dgemm(transa,transb,nd,norder,norder,alpha,u,nd,umat0,norder, &
     beta,ucoefs,nd)
 
-  allocate(pmat(norder,nfar))
-  do i=1,nfar
+  allocate(pmat(norder,nover))
+  do i=1,nover
     call legepols(ts(i),norder-1,pmat(1,i))
   enddo
 
   transa = 'n'
   transb = 'n'
-  call dgemm(transa,transb,nd,nfar,norder,alpha,ucoefs,nd,pmat,norder, &
+  call dgemm(transa,transb,nd,nover,norder,alpha,ucoefs,nd,pmat,norder, &
     beta,uover,nd)
 
 
@@ -439,7 +439,7 @@ subroutine get_qwts2d(nch,norders,ixys,iptype,npts,srcvals,qwts)
   integer itype,istart,ich,i,j,k
 
   do ich=1,nch
-    istart = ixys(i)
+    istart = ixys(ich)
     k = ixys(ich+1)-ixys(ich)
     allocate(wts(k),ts(k))
     if(iptype(ich).eq.1) then
@@ -450,6 +450,7 @@ subroutine get_qwts2d(nch,norders,ixys,iptype,npts,srcvals,qwts)
       ds = sqrt(srcvals(3,istart+j-1)**2 + srcvals(4,istart+j-1)**2)
       qwts(istart+j-1) = ds*wts(j)
     enddo
+    deallocate(wts,ts)
   enddo
 
 

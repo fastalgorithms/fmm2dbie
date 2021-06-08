@@ -169,7 +169,7 @@ C$OMP$PRIVATE(ts,umat,vmat,wts,kk)
               call zget_adap_lege_self(ipv,eps,norders(ich), 
      1          ts_targ(itarg),srccoefs(1,istart),ndtarg,
      1          targvals(1,itarg),norders(ich),fker,ndd,
-     2          dpars,ndz,zpars,ndi,ipars,nqorder,zints)
+     2          dpars,ndz,zpars,ndi,ipars,nchmax,zints)
             endif
           endif
           call zrmatmatt(1,norders(ich),zints,norders(ich),umat,
@@ -301,12 +301,9 @@ c-----------------------------------
 
 
       call get_nqorder_selfquad(ipv,iord,nqorder)
-      call prinf('nqorder=*',nqorder,1)
 
       allocate(ts0(nqorder),w0(nqorder))
       call load_selfquad(ipv,iord,nqorder,ts0,w0)
-      call prin2('ts0=*',ts0,nqorder)
-      call prin2('w0=*',w0,nqorder)
 
       maxdepth = 200
       allocate(stack(2,maxdepth),vals(nporder,maxdepth))
@@ -325,7 +322,6 @@ c-----------------------------------
      1  nporder,fker,ndd,dpars,ndz,zpars,ndi,ipars,nqorder,ts0,w0,
      2     vals,nnmax,eps,zintvals,maxdepth,maxrec,numit,value2,
      3     value3)
-      print *, "numit=",numit
 
       a = tt0
       b = 1.0d0
@@ -336,7 +332,6 @@ c-----------------------------------
      1  nporder,fker,ndd,dpars,ndz,zpars,ndi,ipars,nqorder,ts0,w0,
      2     vals,nnmax,eps,ztmp,maxdepth,maxrec,numit,value2,
      3     value3)
-      print *, "numit=",numit
       
       do i=1,nporder
         zintvals(i) = zintvals(i) + ztmp(i)

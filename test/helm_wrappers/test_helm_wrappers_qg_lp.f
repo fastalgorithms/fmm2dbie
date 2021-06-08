@@ -21,10 +21,12 @@
       integer, allocatable :: ixyso(:),nfars(:)
 
       integer, allocatable :: ich_id(:),inode_id(:)
-      real *8, allocatable :: ts_targ(:,:)
+      real *8, allocatable :: ts_targ(:)
+      real *8, allocatable :: ab(:,:)
       real *8 xyz_out(2),xyz_in(2)
       complex *16, allocatable :: sigma(:)
       complex * 16 zpars(3)
+      real *8 dpars(2)
 
       external fstarn_simple
 
@@ -58,16 +60,17 @@
       dpars(1) = 1.0d0
       dpars(2) = 0.5d0
 
-      ipars(1) = 5
+      ipars(1) = 3
       nover = 1
       nch = 0
       ier = 0
-      eps = 1.0d-13
+      eps = 1.0d-8
       call chunkfunc_guru(eps,rlmax,ifclosed,irefinel,irefiner,rlmaxe,
      1  ta,tb,fstarn_simple,ndd,dpars,ndz,zpars,ndi,ipars,nover,
      2  k,nchmax,nch,norders,ixys,iptype,npts,srcvals,srccoefs,ab,adjs,
      3  ier)
-      stop
+      print *, "after chunkfunc"
+      call prinf('nch=*',nch,1)
 
       zk = 1.0d0
       zpars(1) = zk
@@ -90,8 +93,8 @@
       allocate(cms(2,nch),rads(nch),rad_near(nch))
       allocate(pot(npts),potslp(npts),potdlp(npts))
 
-      call get_centroid_rads(nch,norders,ixys,iptype,npts, 
-     1     srccoefs,cms,rads)
+      call get_centroid_rads2d(nch,norders,ixys,iptype,npts, 
+     1     srccoefs,srcvals,cms,rads)
 
       allocate(sigma(npts),uval(npts),dudnval(npts))
 
@@ -123,13 +126,18 @@ c
 c    find near field
 c
       iptype = 1
-      call get_rfac2d(norder,iptype,rfac)
+      call get_rfac2d(norders(1),iptype,rfac)
+      print *, rfac
       do i=1,nch 
         rad_near(i) = rads(i)*rfac
       enddo
-      
+
+      call prinf('nch=*',nch,1)
+      call prin2('rad_near=*',rad_near,24)
+     
 
       call findnear2dmem(cms,nch,rad_near,ndtarg,targs,npts,nnz)
+      call prinf('nnz=*',nnz,1)
 
       allocate(row_ptr(npts+1),col_ind(nnz))
       
@@ -139,14 +147,16 @@ c
       allocate(iquad(nnz+1)) 
       call get_iquad_rsc2d(nch,ixys,npts,nnz,row_ptr,col_ind,
      1         iquad)
+      print *, "here"
 
       nquad = iquad(nnz+1)-1
       allocate(slp_near(nquad),dlp_near(nquad))
+      print *, nquad
 
 
-      ndtarg = 3
+      ndtarg = 2
 
-      eps = 0.50001d-3
+      eps = 0.50001d-6
 
       ikerorder = -1
 
@@ -198,11 +208,13 @@ c     2    nnz,row_ptr,col_ind,rfac,nfars,ixyso)
 
 cc      goto 1111
 
+      call prinf('npts=*',npts,1)
+      print *, "here3"
+      print *, "targs=",targs(1:2,257)
       call getnearquad_helm_comb_dir_2d(nch,norders,
      1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
      1      ich_id,ts_targ,eps,zpars,iquadtype,nnz,row_ptr,col_ind,
      1      iquad,nquad,slp_near)
-
       
       zpars(2) = 0.0d0
       zpars(3) = 1.0d0
@@ -214,9 +226,9 @@ cc      goto 1111
       call cpu_time(t2)
       tquadgen = t2-t1
 
+ 1111 continue
 
-
-      ifinout = 1     
+      ifinout = 0     
 
       zpars(2) = 1.0d0
       zpars(3) = 0.0d0

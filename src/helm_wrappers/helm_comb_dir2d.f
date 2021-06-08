@@ -1,4 +1,4 @@
-c
+
 c
 c     This file contains the following user callable
 c     routines: 
@@ -299,14 +299,14 @@ c
       data over4pi/0.07957747154594767d0/
 
 
-      iptype_avg = floor(sum(iptype)/(npatches+0.0d0))
-      norder_avg = floor(sum(norders)/(npatches+0.0d0))
+      iptype_avg = floor(sum(iptype)/(nch+0.0d0))
+      norder_avg = floor(sum(norders)/(nch+0.0d0))
 
       call get_rfac2d(norder_avg,iptype_avg,rfac) 
       allocate(cms(2,nch),rads(nch),rad_near(nch))
 
       call get_centroid_rads2d(nch,norders,ixys,iptype,npts, 
-     1     srccoefs,cms,rads)
+     1     srccoefs,srcvals,cms,rads)
 
 C$OMP PARALLEL DO DEFAULT(SHARED) 
       do i=1,nch
@@ -567,7 +567,7 @@ c    estimate max number of sources in neear field of
 c    any target
 c
       nmax = 0
-      call get_near_corr_max(ntarg,row_ptr,nnz,col_ind,nch,
+      call get_near_corr_max2d(ntarg,row_ptr,nnz,col_ind,nch,
      1  ixyso,nmax)
       allocate(srctmp2(2,nmax),ctmp2(nmax),dtmp2(nmax))
       allocate(dipvec2(2,nmax))
@@ -589,8 +589,8 @@ c
 c
 c       set relevatn parameters for the fmm
 c
-      alpha = zpars(2)*zfac
-      beta = zpars(3)*zfac
+      alpha = zpars(2)
+      beta = zpars(3)
 C$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(i)      
       do i=1,ns
         sources(1,i) = srcover(1,i)
@@ -623,7 +623,7 @@ c
 
       call cpu_time(t1)
 C$      t1 = omp_get_wtime()      
-      call hfmm3d(nd,eps,zpars(1),ns,sources,ifcharge,charges,
+      call hfmm2d(nd,eps,zpars(1),ns,sources,ifcharge,charges,
      1  ifdipole,dipstr,dipvec,iper,ifpgh,tmp,tmp,tmp,ntarg,
      1  targvals,ifpghtarg,pot,tmp,tmp,ier)
       call cpu_time(t2)
@@ -688,7 +688,7 @@ C$OMP$PRIVATE(ctmp2,dtmp2,dipvec2,nss,l,jstart,ii,val,npover)
         endif
 
         if(ifcharge.eq.0.and.ifdipole.eq.1) then
-          call h2d_directdp_vc(nd,zpars(1),srctmp2,nss,dtmp2,
+          call h2d_directdp_vec(nd,zpars(1),srctmp2,nss,dtmp2,
      1          dipvec2,targvals(1,i),val,thresh)
         endif
 
@@ -878,7 +878,7 @@ c
       allocate(cms(2,nch),rads(nch),rad_near(nch))
 
       call get_centroid_rads2d(nch,norders,ixys,iptype,npts, 
-     1     srccoefs,cms,rads)
+     1     srccoefs,srcvals,cms,rads)
 
 C$OMP PARALLEL DO DEFAULT(SHARED) 
       do i=1,nch
@@ -1047,7 +1047,7 @@ C$OMP END PARALLEL DO
 
         ztmp = wnrm2
 
-        call zrotmat_gmres(hmat(it,it),ztmp,cs(it),sn(it))
+        call zrotmat_gmres2d(hmat(it,it),ztmp,cs(it),sn(it))
           
         hmat(it,it) = cs(it)*hmat(it,it)+sn(it)*wnrm2
         svec(it1) = -sn(it)*svec(it)

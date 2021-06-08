@@ -794,7 +794,7 @@ c
 c
 c
 c
-      subroutine get_rfacs2d(norder,iptype,rfac,rfac0)
+      subroutine get_rfac2d(norder,iptype,rfac)
 c
 c
 c       this subroutine gets the factors for defining
@@ -839,6 +839,8 @@ c
         if(norder.gt.6) rfac = 1.25d0
         rfac0 = 1.25d0
       endif
+
+      rfac = 3.0d0
 
       
 
