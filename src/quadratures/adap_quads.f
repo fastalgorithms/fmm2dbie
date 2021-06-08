@@ -297,7 +297,7 @@ c-----------------------------------
         iord = 4
       endif
 
-      iord = 1
+      iord = 3
 
 
       call get_nqorder_selfquad(ipv,iord,nqorder)
