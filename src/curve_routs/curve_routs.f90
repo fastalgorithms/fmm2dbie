@@ -505,3 +505,38 @@ subroutine get_chunk_id_ts(nch,norders,ixys,iptype,npts,ich_id,ts_pts)
   enddo
 
 end subroutine get_chunk_id_ts
+!
+!
+subroutine get_chunk_scurv(npts,srcvals,dks)
+!
+!  For each boundary discretization point, compute the
+! signed curvature  
+!
+!  Input arguments
+!    - npts: integer
+!        total number of discretization points
+!    - srcvals: real *8 (8,npts)
+!        x,y,dxdt,dydt,dxdt2,dydt2,rnx,rny at the discretization points
+  
+!  Output arguments
+!    - dks: real *8(npts)
+!        signed curvature at each point of geometry
+!      
+  implicit none
+  integer, intent(in) :: npts
+  real *8, intent(in) :: srcvals(8,npts)
+  real *8, intent(out) :: dks(npts)
+
+  integer i
+  real *8 dx,dy,d2x,d2y,dsdt3
+
+  do i = 1,npts
+     dx = srcvals(3,i)
+     dy = srcvals(4,i)     
+     d2x = srcvals(5,i)
+     d2y = srcvals(6,i)
+     dsdt3 = sqrt(dx**2+dy**3)**3
+     dks(i) = (dx*d2y-dy*d2x)/dsdt3
+  enddo
+
+end subroutine get_chunk_scurv
