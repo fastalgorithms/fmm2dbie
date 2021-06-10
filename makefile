@@ -77,8 +77,8 @@ COM = src/common
 COMOBJS = $(COM)/hkrand.o \
 	$(COM)/dlaran.o $(COM)/lapack_wrap.o \
 	$(COM)/legeexps.o $(COM)/prini_new.o \
-	$(COM)/hkrand.o $(COM)/pyplot.o \
-	$(COM)/lapack_wrap.o $(COM)/sort.o \
+	$(COM)/pyplot.o \
+	$(COM)/sort.o \
 	$(COM)/sparse_reps.o $(COM)/rotmat_gmres.o \
 	$(COM)/get_fmm2d_thresh.o
 
