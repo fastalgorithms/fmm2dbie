@@ -228,22 +228,7 @@
       call lematrin(k,k,ttest,ximat,xs,work)
       call interpmat_1d_hels(k,ttest,xs,ximat)
 
-      ifread = 0
-      if(ifread.eq.1) then
 
-        open(unit=33,file='ximat.dat')
-        do i=1,k
-          do j=1,k
-            read(33,*) ximat(j,i)
-          enddo
-        enddo
-        close(33)
-      endif
-
-
-
-      call prin2_long('ximat=*',ximat(1:3,1:3),9)
-      call prin2_long('xs=*',xs,k)
       
       
       

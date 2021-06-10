@@ -38,7 +38,7 @@
       pi = atan(done)*4
 
       nchmax = 20000
-      k = 16
+      k = 52
       npts_max = nchmax*k
 
       allocate(srcvals(8,npts_max),srccoefs(6,npts_max),ab(2,nchmax))
@@ -60,16 +60,24 @@
       dpars(1) = 1.0d0
       dpars(2) = 0.5d0
 
-      ipars(1) = 3
+      ipars(1) = 0
       nover = 1
       nch = 0
       ier = 0
-      eps = 1.0d-8
+      eps = 1.0d-12
       call chunkfunc_guru(eps,rlmax,ifclosed,irefinel,irefiner,rlmaxe,
      1  ta,tb,fstarn_simple,ndd,dpars,ndz,zpars,ndi,ipars,nover,
      2  k,nchmax,nch,norders,ixys,iptype,npts,srcvals,srccoefs,ab,adjs,
      3  ier)
       print *, "after chunkfunc"
+
+      do i=1,12
+        rr = srcvals(7,i)**2 + srcvals(8,i)**2
+        write(6,'(6(2x,e11.5))') srcvals(1,i),srcvals(2,i),
+     1     srcvals(3,i),srcvals(4,i),srcvals(7,i),srcvals(8,i)
+
+      enddo
+
       call prinf('nch=*',nch,1)
 
       zk = 1.0d0
@@ -133,7 +141,6 @@ c
       enddo
 
       call prinf('nch=*',nch,1)
-      call prin2('rad_near=*',rad_near,24)
      
 
       call findnear2dmem(cms,nch,rad_near,ndtarg,targs,npts,nnz)
@@ -209,8 +216,6 @@ c     2    nnz,row_ptr,col_ind,rfac,nfars,ixyso)
 cc      goto 1111
 
       call prinf('npts=*',npts,1)
-      print *, "here3"
-      print *, "targs=",targs(1:2,257)
       call getnearquad_helm_comb_dir_2d(nch,norders,
      1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
      1      ich_id,ts_targ,eps,zpars,iquadtype,nnz,row_ptr,col_ind,
@@ -266,6 +271,13 @@ c
         pot(i) = (potslp(i) - potdlp(i))*2
         errl2 = errl2 + abs(uval(i)-pot(i))**2*wts(i)
         rl2 = rl2 + abs(uval(i))**2*wts(i)
+
+        if(i.lt.5) then
+          write(6,'(6(2x,e11.5))') real(potslp(i)),imag(potslp(i)),
+     1     real(potdlp(i)),imag(potdlp(i)),real(uval(i)),imag(uval(i))
+        endif
+        write(33,'(6(2x,e11.5))') real(potslp(i)),imag(potslp(i)),
+     1     real(potdlp(i)),imag(potdlp(i)),real(uval(i)),imag(uval(i))
       enddo
 
 
