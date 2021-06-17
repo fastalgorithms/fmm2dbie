@@ -125,13 +125,13 @@ c
       integer nchmax
       integer, allocatable :: row_ind(:),col_ptr(:),iper(:)
       real *8, allocatable :: umat(:,:),vmat(:,:),ts(:),wts(:)
-      complex *16, allocatable :: zints(:)
+      complex *16, allocatable :: zints(:),ztmp(:)
       integer itarg,kmax
 
       external fker
 
       kmax = maxval(norders)
-      allocate(zints(kmax+5))
+      allocate(zints(kmax+5),ztmp(kmax+5))
 
       allocate(row_ind(nnz),col_ptr(nch+1),iper(nnz))
       call rsc_to_csc(nch,ntarg,nnz,row_ptr,col_ind,col_ptr,row_ind,
@@ -150,7 +150,7 @@ C$OMP END PARALLEL DO
       itype = 2
 
 C$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(itarg,j,ich,istart,zints)
-C$OMP$PRIVATE(ts,umat,vmat,wts,kk)
+C$OMP$PRIVATE(ts,umat,vmat,wts,kk,ztmp)
       do ich=1,nch
         kk = norders(ich)
         allocate(ts(kk),umat(kk,kk),vmat(kk,kk),wts(kk))
@@ -173,7 +173,7 @@ C$OMP$PRIVATE(ts,umat,vmat,wts,kk)
             endif
           endif
           call zrmatmatt(1,norders(ich),zints,norders(ich),umat,
-     1       wnear(iquad(j)))
+     1       wnear(iquad(iper(j))))
         enddo
         deallocate(ts,umat,vmat,wts)
       enddo
@@ -279,7 +279,7 @@ c-----------------------------------
       real *8 umat0,vmat0
       integer itype,nqorder
 
-      real *8 a,b
+      real *8 a,b,ra
       integer maxrec,numit,maxdepth,nnmax,i,j,l,ier
       integer iord
 
@@ -302,8 +302,12 @@ c-----------------------------------
 
       call get_nqorder_selfquad(ipv,iord,nqorder)
 
+      nqorder = 12
+
       allocate(ts0(nqorder),w0(nqorder))
-      call load_selfquad(ipv,iord,nqorder,ts0,w0)
+cc      call load_selfquad(ipv,iord,nqorder,ts0,w0)
+      itype = 1
+      call legeexps(itype,nqorder,ts0,umat0,vmat0,w0)
 
       maxdepth = 200
       allocate(stack(2,maxdepth),vals(nporder,maxdepth))
@@ -322,6 +326,12 @@ c-----------------------------------
      1  nporder,fker,ndd,dpars,ndz,zpars,ndi,ipars,nqorder,ts0,w0,
      2     vals,nnmax,eps,zintvals,maxdepth,maxrec,numit,value2,
      3     value3)
+      if(ier.ne.0) then
+        print *, "on left interval:"
+        print *, "adaptive integration in self thrashed"
+        print *, " "
+        print *, " "
+      endif
 
       a = tt0
       b = 1.0d0
@@ -330,9 +340,16 @@ c-----------------------------------
       numit = 0
       call zadinrecm(ier,stack,a,b,norder,srccoefs,ndtarg,xytarg,
      1  nporder,fker,ndd,dpars,ndz,zpars,ndi,ipars,nqorder,ts0,w0,
-     2     vals,nnmax,eps,ztmp,maxdepth,maxrec,numit,value2,
-     3     value3)
+     2  vals,nnmax,eps,ztmp,maxdepth,maxrec,numit,value2,
+     3  value3)
       
+      if(ier.ne.0) then
+        print *, "on right interval:"
+        print *, "adaptive integration in self thrashed"
+        print *, " "
+        print *, " "
+      endif
+
       do i=1,nporder
         zintvals(i) = zintvals(i) + ztmp(i)
       enddo

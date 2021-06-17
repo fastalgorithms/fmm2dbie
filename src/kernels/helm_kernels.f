@@ -57,7 +57,7 @@ c
 
       rr2 = (srcinfo(1)-targinfo(1))**2 + (srcinfo(2)-targinfo(2))**2
       rr = dsqrt(rr2)
-      rinv = 1/rr
+      rinv = 1.0d0/rr
       z = zk*rr
       ifexpon = 1
       call hank103(z,h0,h1,ifexpon)
@@ -87,17 +87,17 @@ c
 
       rr2 = (srcinfo(1)-targinfo(1))**2 + (srcinfo(2)-targinfo(2))**2
       rr = dsqrt(rr2)
-      rinv = 1/rr
+      rinv = 1.0d0/rr
       z = zk*rr
       ifexpon = 1
       call hank103(z,h0,h1,ifexpon)
 
       ztmp = -zs*zk*h1*rinv
 
-      gx = ztmp*(srcinfo(1)-targinfo(1))
-      gy = ztmp*(srcinfo(2)-targinfo(2))
-      
-      u = gx*srcinfo(7) + gy*srcinfo(8)
+      gx = (srcinfo(1)-targinfo(1))*srcinfo(7)
+      gy = (srcinfo(2)-targinfo(2))*srcinfo(8)
+
+      u = (gx + gy)*ztmp
 
       return
       end
@@ -118,7 +118,7 @@ c
       zk = zpars(1)
       rr2 = (srcinfo(1)-targinfo(1))**2 + (srcinfo(2)-targinfo(2))**2
       rr = dsqrt(rr2)
-      rinv = 1/rr
+      rinv = 1.0d0/rr
       z = zk*rr
       ifexpon = 1
       call hank103(z,h0,h1,ifexpon)
@@ -164,7 +164,7 @@ c
       rr2 = (srcinfo(1)-targinfo(1))**2 + (srcinfo(2)-targinfo(2))**2
       rr = dsqrt(rr2)
 
-      rinv = 1/rr
+      rinv = 1.0d0/rr
 
 
       z = zk*rr
@@ -227,7 +227,7 @@ c
       
       rr2 = (srcinfo(1)-targinfo(1))**2 + (srcinfo(2)-targinfo(2))**2
       rr = dsqrt(rr2)
-      rinv = 1/rr
+      rinv = 1.0d0/rr
 
       xd = xd*rinv
       yd = yd*rinv
