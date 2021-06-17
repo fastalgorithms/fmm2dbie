@@ -48,7 +48,7 @@
       dpars(1) = 1.0d0
       dpars(2) = 0.5d0
 
-      ipars(1) = 30
+      ipars(1) = 10
       nover = 1
       nch = 0
       ier = 0
@@ -61,7 +61,6 @@
       call prinf('ier=*',ier,1)
       if(ier.ne.0) then
         call prinf('failed to execute*',ier,1)
-        stop
       endif
       call prinf('nch=*',nch,1)
       allocate(xs(npts),ys(npts))

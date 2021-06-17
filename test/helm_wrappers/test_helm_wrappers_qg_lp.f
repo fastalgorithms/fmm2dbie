@@ -269,7 +269,6 @@ c     1     real(potdlp(i)),imag(potdlp(i)),real(uval(i)),imag(uval(i))
       err = sqrt(errl2/rl2)
 
       call prin2('error in greens identity=*',err,1)
-      stop
 
       i1 = 0
       if(err.lt.1.0d-2) i1 = 1
@@ -306,8 +305,8 @@ c     1     real(potdlp(i)),imag(potdlp(i)),real(uval(i)),imag(uval(i))
       write(33,'(a,i1,a,i1,a)') 'Successfully completed ',nsuccess,
      1  ' out of ',ntests,' in helm_wrappers testing suite'
       close(33)
-      
-      stop
+
+      return      
       end
 
 

@@ -174,18 +174,18 @@ install: $(STATICLIB) $(DYNAMICLIB)
 # testing routines
 #
 test: $(STATICLIB) test/curv test/chunk test/quad test/helm
-#	cd test/curve_routs; ./int2-curv
-#	cd test/chunk_routs; ./int2-chunk
-#	cd test/quadratures; ./int2-quad
+	cd test/curve_routs; ./int2-curv
+	cd test/chunk_routs; ./int2-chunk
+	cd test/quadratures; ./int2-quad
 	cd test/helm_wrappers; ./int2-helm
-#	cat print_testres.txt
-#	rm print_testres.txt
+	cat print_testres.txt
+	rm print_testres.txt
 
 
 test/curv:
 	$(FC) $(FFLAGS) test/curve_routs/test_curve_routs.f -o test/curve_routs/int2-curv lib-static/$(STATICLIB) $(LIBS)
 
-CTOBJS = test/chunk_routs/test_dchunkints.o test/chunk_routs/test_zchunkints.o
+CTOBJS = test/chunk_routs/test_dchunkints.o test/chunk_routs/test_zchunkints.o test/chunk_routs/test_bary.o
 
 test/chunk: $(CTOBJS)
 	$(FC) $(FFLAGS) test/chunk_routs/test_chunk_routs.f -o test/chunk_routs/int2-chunk $(CTOBJS) lib-static/$(STATICLIB) $(LIBS)
