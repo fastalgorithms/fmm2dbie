@@ -5,4 +5,5 @@ plot*.py
 fort.*
 *.a
 *.so
-
+make.inc
+*~

@@ -80,11 +80,12 @@ COMOBJS = $(COM)/hkrand.o \
 	$(COM)/pyplot.o \
 	$(COM)/sort.o \
 	$(COM)/sparse_reps.o $(COM)/rotmat_gmres.o \
-	$(COM)/get_fmm2d_thresh.o
+	$(COM)/get_fmm2d_thresh.o \
 
 # Surface wrappers
 SURF = src/curve_routs
-SOBJS = $(SURF)/chunks.o $(SURF)/curve_routs.o
+SOBJS = $(SURF)/chunks.o $(SURF)/curve_routs.o \
+	$(SURF)/chunk_near_point.o
 
 # Quadrature wrappers
 QUAD = src/quadratures
@@ -173,17 +174,23 @@ install: $(STATICLIB) $(DYNAMICLIB)
 #
 # testing routines
 #
-test: $(STATICLIB) test/curv test/chunk test/quad test/helm
+test: $(STATICLIB) test/curv test/chunk test/quad test/helm test/common test/near-point
 #	cd test/curve_routs; ./int2-curv
 #	cd test/chunk_routs; ./int2-chunk
 #	cd test/quadratures; ./int2-quad
 	cd test/helm_wrappers; ./int2-helm
+#	cd test/common; ./int2-rsc
+#	cd test/curve_routs; ./int2-near-point
 #	cat print_testres.txt
 #	rm print_testres.txt
 
 
 test/curv:
 	$(FC) $(FFLAGS) test/curve_routs/test_curve_routs.f -o test/curve_routs/int2-curv lib-static/$(STATICLIB) $(LIBS)
+
+NEARPTOBJS = test/curve_routs/test_near_point.o
+test/near-point: $(NEARPTOBJS)
+	$(FC) $(FFLAGS) test/curve_routs/test_near_point.f -o test/curve_routs/int2-near-point lib-static/$(STATICLIB) $(LIBS)
 
 CTOBJS = test/chunk_routs/test_dchunkints.o test/chunk_routs/test_zchunkints.o
 
@@ -197,6 +204,11 @@ test/quad: $(QTOBJS)
 
 test/helm:
 	$(FC) $(FFLAGS) test/helm_wrappers/test_helm_wrappers_qg_lp.f -o test/helm_wrappers/int2-helm lib-static/$(STATICLIB) $(LIBS)
+
+TESTCOMOBJS = test/common/test_rsc_to_csc.o
+
+test/common: $(TESTCOMOBJS)
+	$(FC) $(FFLAGS) test/common/test_rsc_to_csc.f -o test/common/int2-rsc lib-static/$(STATICLIB) $(LIBS)
 
 #
 # housekeeping routines
