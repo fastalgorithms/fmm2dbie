@@ -553,8 +553,6 @@ c
       integer nd,ntarg0
 
       real *8 ttot,done,pi
-      complex *16 zfac
-      data zfac/(0.0d0,0.25d0)/
 
       parameter (nd=1,ntarg0=1)
 
@@ -581,7 +579,7 @@ c
 c 
 c       oversample density
 c
-
+      
       call oversample_fun_curv2d(2,nch,norders,ixys,iptype, 
      1    npts,sigma,novers,ixyso,ns,sigmaover)
 
@@ -591,6 +589,7 @@ c       set relevatn parameters for the fmm
 c
       alpha = zpars(2)
       beta = zpars(3)
+
 C$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(i)      
       do i=1,ns
         sources(1,i) = srcover(1,i)
@@ -620,7 +619,6 @@ c
 c
 c       call the fmm
 c
-
       call cpu_time(t1)
 C$      t1 = omp_get_wtime()      
       call hfmm2d(nd,eps,zpars(1),ns,sources,ifcharge,charges,
@@ -629,6 +627,7 @@ C$      t1 = omp_get_wtime()
       call cpu_time(t2)
 C$      t2 = omp_get_wtime()
 
+            
       timeinfo(1) = t2-t1
 
 
@@ -636,6 +635,7 @@ c
 c        compute threshold for ignoring local computation
 c
       call get_fmm2d_thresh(2,ns,sources,2,ntarg,targvals,thresh)
+
 
 c
 c       add in precomputed quadrature
@@ -657,7 +657,6 @@ C$OMP$PRIVATE(jstart,pottmp,npols,l)
         enddo
       enddo
 C$OMP END PARALLEL DO
-
 
 c
 

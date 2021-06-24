@@ -174,15 +174,14 @@ install: $(STATICLIB) $(DYNAMICLIB)
 #
 # testing routines
 #
-test: $(STATICLIB) test/curv test/chunk test/quad test/helm test/common test/near-point
-#	cd test/curve_routs; ./int2-curv
-#	cd test/chunk_routs; ./int2-chunk
-#	cd test/quadratures; ./int2-quad
+test: $(STATICLIB) test/curv test/chunk test/quad test/helm test/near-point
+	cd test/curve_routs; ./int2-curv
+	cd test/curve_routs; ./int2-near-point
+	cd test/chunk_routs; ./int2-chunk
+	cd test/quadratures; ./int2-quad
 	cd test/helm_wrappers; ./int2-helm
-#	cd test/common; ./int2-rsc
-#	cd test/curve_routs; ./int2-near-point
-#	cat print_testres.txt
-#	rm print_testres.txt
+	cat print_testres.txt
+	rm print_testres.txt
 
 
 test/curv:
@@ -192,7 +191,7 @@ NEARPTOBJS = test/curve_routs/test_near_point.o
 test/near-point: $(NEARPTOBJS)
 	$(FC) $(FFLAGS) test/curve_routs/test_near_point.f -o test/curve_routs/int2-near-point lib-static/$(STATICLIB) $(LIBS)
 
-CTOBJS = test/chunk_routs/test_dchunkints.o test/chunk_routs/test_zchunkints.o
+CTOBJS = test/chunk_routs/test_dchunkints.o test/chunk_routs/test_zchunkints.o test/chunk_routs/test_bary.o
 
 test/chunk: $(CTOBJS)
 	$(FC) $(FFLAGS) test/chunk_routs/test_chunk_routs.f -o test/chunk_routs/int2-chunk $(CTOBJS) lib-static/$(STATICLIB) $(LIBS)

@@ -38,7 +38,7 @@
       pi = atan(done)*4
 
       nchmax = 20000
-      k = 52
+      k = 16
       npts_max = nchmax*k
 
       allocate(srcvals(8,npts_max),srccoefs(6,npts_max),ab(2,nchmax))
@@ -57,8 +57,8 @@
       ndi = 1
       ndz = 0
       
-      dpars(1) = 1.0d0
-      dpars(2) = 0.5d0
+      dpars(1) = 0.01d0
+      dpars(2) = 0.005d0
 
       ipars(1) = 0
       nover = 1
@@ -69,16 +69,8 @@
      1  ta,tb,fstarn_simple,ndd,dpars,ndz,zpars,ndi,ipars,nover,
      2  k,nchmax,nch,norders,ixys,iptype,npts,srcvals,srccoefs,ab,adjs,
      3  ier)
-      print *, "after chunkfunc"
 
-      do i=1,12
-        rr = srcvals(7,i)**2 + srcvals(8,i)**2
-        write(6,'(6(2x,e11.5))') srcvals(1,i),srcvals(2,i),
-     1     srcvals(3,i),srcvals(4,i),srcvals(7,i),srcvals(8,i)
 
-      enddo
-
-      call prinf('nch=*',nch,1)
 
       zk = 1.0d0
       zpars(1) = zk
@@ -135,16 +127,13 @@ c    find near field
 c
       iptype = 1
       call get_rfac2d(norders(1),iptype,rfac)
-      print *, rfac
       do i=1,nch 
         rad_near(i) = rads(i)*rfac
       enddo
 
-      call prinf('nch=*',nch,1)
      
 
       call findnear2dmem(cms,nch,rad_near,ndtarg,targs,npts,nnz)
-      call prinf('nnz=*',nnz,1)
 
       allocate(row_ptr(npts+1),col_ind(nnz))
       
@@ -154,16 +143,14 @@ c
       allocate(iquad(nnz+1)) 
       call get_iquad_rsc2d(nch,ixys,npts,nnz,row_ptr,col_ind,
      1         iquad)
-      print *, "here"
 
       nquad = iquad(nnz+1)-1
       allocate(slp_near(nquad),dlp_near(nquad))
-      print *, nquad
 
 
       ndtarg = 2
 
-      eps = 0.50001d-6
+      eps = 0.50001d-8
 
       ikerorder = -1
 
@@ -184,7 +171,6 @@ c     2    nnz,row_ptr,col_ind,rfac,nfars,ixyso)
 
       npts_over = ixyso(nch+1)-1
 
-      print *, "npts_over=",npts_over
 
 
       allocate(srcover(8,npts_over),sigmaover(npts_over),
@@ -215,7 +201,6 @@ c     2    nnz,row_ptr,col_ind,rfac,nfars,ixyso)
 
 cc      goto 1111
 
-      call prinf('npts=*',npts,1)
       call getnearquad_helm_comb_dir_2d(nch,norders,
      1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
      1      ich_id,ts_targ,eps,zpars,iquadtype,nnz,row_ptr,col_ind,
@@ -273,8 +258,8 @@ c
         rl2 = rl2 + abs(uval(i))**2*wts(i)
 
         if(i.lt.5) then
-          write(6,'(6(2x,e11.5))') real(potslp(i)),imag(potslp(i)),
-     1     real(potdlp(i)),imag(potdlp(i)),real(uval(i)),imag(uval(i))
+c          write(6,'(6(2x,e11.5))') real(potslp(i)),imag(potslp(i)),
+c     1     real(potdlp(i)),imag(potdlp(i)),real(uval(i)),imag(uval(i))
         endif
         write(33,'(6(2x,e11.5))') real(potslp(i)),imag(potslp(i)),
      1     real(potdlp(i)),imag(potdlp(i)),real(uval(i)),imag(uval(i))
@@ -320,8 +305,8 @@ c
       write(33,'(a,i1,a,i1,a)') 'Successfully completed ',nsuccess,
      1  ' out of ',ntests,' in helm_wrappers testing suite'
       close(33)
-      
-      stop
+
+      return      
       end
 
 

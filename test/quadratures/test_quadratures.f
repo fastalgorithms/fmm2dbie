@@ -5,10 +5,10 @@
 
       nsuc = i1+i2
       open(unit=33,file='../../print_testres.txt',access='append')
-      write(33,'(a,i2,a,i2,a)') 'Successfully completed ',nsuc,
+      write(33,'(a,i1,a,i1,a)') 'Successfully completed ',nsuc,
      1  ' out of ',ntests,' tests in quadratures testing suite'
       close(33)
 
 
-      stop
+      return
       end

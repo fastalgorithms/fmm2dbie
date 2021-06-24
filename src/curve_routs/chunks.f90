@@ -188,10 +188,7 @@
         ifprocess(i)=0
       enddo
 
-      ntail = 3 + k/12
-      kuse = k + ntail
       allocate(xs(k),ws(k),u(k,k),v(k,k))
-      allocate(xs2(kuse),ws2(kuse),u2(kuse,kuse),v2(kuse,kuse))
 
 !
 !       construct legendre nodes and weights, k and 2k of them, as well
@@ -199,13 +196,11 @@
 !
       itype=2
       call legeexps(itype,k,xs,u,v,ws)
-      call legeexps(itype,kuse,xs2,u2,v2,ws2)
 
       allocate(ttest(k))
       do i=1,k
         ttest(i) = -1.0d0 + 2.0d0*(i-1.0d0)/(k-1.0d0)
       enddo
-      call prin2('ttest=*',ttest,k)
 
   
       
@@ -237,19 +232,12 @@
 !
 !
       rlcurve = 0
-      call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-         ta,tb,xs2,ws2,rlcurve)
+      call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+         ta,tb,xs,ws,rlcurve)
       rlcurve0 = rlcurve
-      call prin2('rlcurve=*',rlcurve,1)
-      allocate(curv(kuse))
-      call chunkcurv(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars,&
-        ta,tb,xs2,ws2,curv)
-      rkmax = 1+abs(curv(1))
-      rkmin = 1+abs(curv(1))
-      do i=1,kuse
-        if(1+abs(curv(i)).gt.rkmax) rkmax = 1+abs(curv(i))
-        if(1+abs(curv(i)).lt.rkmax) rkmin = 1+abs(curv(i))
-      enddo
+      allocate(curv(k))
+      call chunkcurv(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars,&
+        ta,tb,xs,ws,curv)
       
 
       alpha = 1.0d0
@@ -259,7 +247,6 @@
       maxiter=52
       do ijk = 1,maxiter
         rlcurve = rlcurve0
-        epsuse = max(eps,2.0d0**(-48)*rkmax/rkmin)
         epsuse = eps
 !        read *, i
 !
@@ -312,11 +299,6 @@
             
           enddo
 
-          if(iprint.eq.1) then
-!            call prin2_long('finterp=*',finterp,2*k)
-!            call prin2_long('finterpex=*',finterpex,2*k)
-          endif
-
           call dgemm('n','t',2,k,k,alpha,fvals,2,ximat,k, &
               beta,finterp,2)
 
@@ -358,12 +340,10 @@
           rmsemax = 0.0d0
 
           if(err1.gt.epsuse) then
-!            if(iprint.eq.1) print *, "1,",ich,err1,rlpan,err1a,err1r
             goto 2800
           endif
 
           if(err2.gt.epsuse) then
-!            if(iprint.eq.1) print *, "2",ich,err2,rlpan,err2a,err2r
             goto 2800
           endif
 
@@ -423,14 +403,14 @@
           rlcurve0 = rlcurve0 - rlpan
           a = ab(1,ich)
           b = ab(2,ich)
-          call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-            a,b,xs2,ws2,rlpan)
+          call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+            a,b,xs,ws,rlpan)
           rlcurve0 = rlcurve0 + rlpan
 
           a = ab(1,nch)
           b = ab(2,nch)
-          call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-            a,b,xs2,ws2,rlpan)
+          call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+            a,b,xs,ws,rlpan)
           rlcurve0 = rlcurve0 + rlpan
 !
  4600 continue
@@ -442,7 +422,6 @@
       enddo
 !
  5100 continue
-      call prinf('nch=*',nch,1)
 !
 !       the curve should be resolved to precision eps now on
 !       each interval ab(,i)
@@ -450,7 +429,7 @@
 !       factor of more than 2, split them as well. iterate until done.
 !
 
-      maxiter=2
+      maxiter=20
       do ijk=1,maxiter
 !
         nchold=nch
@@ -466,8 +445,8 @@
           a=ab(1,i)
           b=ab(2,i)
           rlself = 0
-          call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-            a,b,xs2,ws2,rlself)
+          call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+            a,b,xs,ws,rlself)
 !
           rl1=rlself
           rl2=rlself
@@ -476,16 +455,16 @@
             a1=ab(1,i1)
             b1=ab(2,i1)
             rl1 = 0
-            call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-            a1,b1,xs2,ws2,rl1)
+            call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+            a1,b1,xs,ws,rl1)
           endif
 !
           if (i2 .gt. 0) then
             a2=ab(1,i2)
             b2=ab(2,i2)
             rl2 = 0
-            call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-            a2,b2,xs2,ws2,rl2)
+            call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+            a2,b2,xs,ws,rl2)
           endif
 
 !
@@ -553,6 +532,7 @@
         ier = 4
         return
       endif
+
 !
 !
       do ijk=1,nover-1
@@ -566,8 +546,9 @@
 !       find ab2 using newton such that 
 !       len(a,ab2)=len(ab2,b)=half the chunk length
 !
-          call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-          a,b,xs2,ws2,rl)
+          rl = 0.0d0
+          call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+            a,b,xs,ws,rl)
 !
           rlhalf=rl/2
           thresh=1.0d-8
@@ -576,9 +557,11 @@
 !
           do iter=1,1000
 !
-            call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-            a,ab0,xs2,ws2,rl1)
-            call funcurve(ab0,pars,x,y,dx,dy,ddx,ddy)
+            rl1 = 0.0d0
+            call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+            a,ab0,xs,ws,rl1)
+            call funcurve(ab0,ndd,dpars,ndz,zpars,ndi,ipars,x,y, &
+              dx,dy,ddx,ddy)
             dsdt=sqrt(dx**2+dy**2)
             ab1=ab0-(rl1-rlhalf)/dsdt
 !
@@ -631,10 +614,12 @@
       a2=ab(1,iright)
       b2=ab(2,iright)
 !
-      call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-        a1,b1,xs2,ws2,rlleft)
-      call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-        a2,b2,xs2,ws2,rlright)
+      rlleft = 0.0d0
+      rlright = 0.0d0
+      call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+        a1,b1,xs,ws,rlleft)
+      call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+        a2,b2,xs,ws,rlright)
 !
 !       . . . dyadically split the left segment
 !
@@ -668,8 +653,9 @@
           ab(1,nch)=ab2
           ab(2,nch)=b
 !
-          call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-            a,ab2,xs2,ws2,rlleft)
+          rlleft = 0.0d0
+          call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+            a,ab2,xs,ws,rlleft)
 !
         enddo
       endif
@@ -706,8 +692,9 @@
           ab(1,nch)=ab2
           ab(2,nch)=b
 !
-          call chunklength(kuse,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
-            ab2,b,xs2,ws2,rlright)
+          rlright = 0.0d0
+          call chunklength(k,funcurve,ndd,dpars,ndz,zpars,ndi,ipars, &
+            ab2,b,xs,ws,rlright)
 !
         enddo
       endif
@@ -917,12 +904,6 @@
       do i=1,4
         rints(i) = 0
       enddo
-      call prinf('k=*',k,1)
-      call prinf('ndi=*',ndi,1)
-      call prinf('ipars=*',ipars,ndi)
-      call prin2('dpars=*',dpars,ndd)
-      call prin2('xs=*',xs,k)
-      call prin2('ws=*',ws,k)
       ra = 0
       do i=1,k
         t = ta + (tb-ta)*(xs(i)+1)/2
@@ -1037,22 +1018,10 @@
         enddo
       enddo
 
-      open(unit=35,file='vrmats.dat')
-      do i=1,k
-        do j=1,k
-          write(35,*) vmat_trans(j,i),rmat_trans(j,i)
-        enddo
-      enddo
-      close(35)
-
-      call prin2('vmat_trans=*',vmat_trans,24)
-      call prin2('rmat_trans=*',rmat_trans,24)
-
       info = 0
 
       call dgausselim_vec(k,vmat_trans,k,rmat_trans,info,ximat_trans, &
         dcond)
-      call prinf('here*',i,0)
       
       do i=1,k
         do j=1,k

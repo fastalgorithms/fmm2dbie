@@ -346,10 +346,22 @@ c
       beta = 0.0d0
       nuse = max(k,np)
 
+
       do i=1,m
         tt = u*t(i)+v
-        call legepols(tt,nuse-1,pols) 
-        call dgemv('n',6,k,alpha,srccoefs,6,pols,1,beta,srctmp,1)
+        call legepols(tt,nuse-1,pols)
+        
+        do j=1,6
+          srctmp(j) = 0
+        enddo
+
+        do l=1,k
+          do j=1,6
+            srctmp(j) = srctmp(j) + pols(l)*srccoefs(j,l)
+          enddo
+        enddo
+
+cc        call dgemv('n',6,k,alpha,srccoefs,6,pols,1,beta,srctmp,1)
         dst = sqrt(srctmp(3)**2 + srctmp(4)**2)
         srctmp(7) = srctmp(4)/dst
         srctmp(8) = -srctmp(3)/dst
