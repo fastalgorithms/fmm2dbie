@@ -85,7 +85,7 @@ COMOBJS = $(COM)/hkrand.o \
 # Surface wrappers
 SURF = src/curve_routs
 SOBJS = $(SURF)/chunks.o $(SURF)/curve_routs.o \
-	$(SURF)/chunk_near_point.o
+	$(SURF)/chunk_near_point.o $(SURF)/chunk_interior.o
 
 # Quadrature wrappers
 QUAD = src/quadratures
@@ -174,9 +174,10 @@ install: $(STATICLIB) $(DYNAMICLIB)
 #
 # testing routines
 #
-test: $(STATICLIB) test/curv test/chunk test/quad test/helm test/near-point
+test: $(STATICLIB) test/curv test/chunk test/quad test/helm test/near-point test/interior
 	cd test/curve_routs; ./int2-curv
 	cd test/curve_routs; ./int2-near-point
+	cd test/curve_routs; ./int2-chunk-interior
 	cd test/chunk_routs; ./int2-chunk
 	cd test/quadratures; ./int2-quad
 	cd test/helm_wrappers; ./int2-helm
@@ -190,6 +191,10 @@ test/curv:
 NEARPTOBJS = test/curve_routs/test_near_point.o
 test/near-point: $(NEARPTOBJS)
 	$(FC) $(FFLAGS) test/curve_routs/test_near_point.f -o test/curve_routs/int2-near-point lib-static/$(STATICLIB) $(LIBS)
+
+INTERIOROBJS = test/curve_routs/test_chunk_interior.o
+test/interior: $(INTERIOROBJS)
+	$(FC) $(FFLAGS) test/curve_routs/test_chunk_interior.f90 -o test/curve_routs/int2-chunk-interior lib-static/$(STATICLIB) $(LIBS)
 
 CTOBJS = test/chunk_routs/test_dchunkints.o test/chunk_routs/test_zchunkints.o test/chunk_routs/test_bary.o
 
