@@ -100,10 +100,14 @@ COBJS = $(CHUNK)/dchunkints_main.o $(CHUNK)/zchunkints_main.o
 HELM = src/helm_wrappers
 HOBJS = $(HELM)/helm_comb_dir2d.o
 
-KERN = src/kernels
-KOBJS = $(KERN)/helm_kernels.o
+# Laplace wrappers
+LAP = src/lap_wrappers
+LOBJS = $(LAP)/lap_comb_dir2d.o
 
-OBJS = $(COMOBJS) $(SOBJS) $(COBJS) $(QOBJS) $(HOBJS) $(KOBJS) 
+KERN = src/kernels
+KOBJS = $(KERN)/helm_kernels.o $(KERN)/lap_kernels.o
+
+OBJS = $(COMOBJS) $(SOBJS) $(COBJS) $(QOBJS) $(HOBJS) $(KOBJS) $(LOBJS)
 
 
 
@@ -174,13 +178,14 @@ install: $(STATICLIB) $(DYNAMICLIB)
 #
 # testing routines
 #
-test: $(STATICLIB) test/curv test/chunk test/quad test/helm test/near-point test/interior
+test: $(STATICLIB) test/curv test/chunk test/quad test/helm test/near-point test/interior test/lap
 	cd test/curve_routs; ./int2-curv
 	cd test/curve_routs; ./int2-near-point
 	cd test/curve_routs; ./int2-chunk-interior
 	cd test/chunk_routs; ./int2-chunk
 	cd test/quadratures; ./int2-quad
 	cd test/helm_wrappers; ./int2-helm
+	cd test/lap_wrappers; ./int2-lap
 	cat print_testres.txt
 	rm print_testres.txt
 
@@ -208,6 +213,9 @@ test/quad: $(QTOBJS)
 
 test/helm:
 	$(FC) $(FFLAGS) test/helm_wrappers/test_helm_wrappers_qg_lp.f -o test/helm_wrappers/int2-helm lib-static/$(STATICLIB) $(LIBS)
+
+test/lap:
+	$(FC) $(FFLAGS) test/lap_wrappers/test_lap_wrappers_qg_lp.f -o test/lap_wrappers/int2-lap lib-static/$(STATICLIB) $(LIBS)
 
 TESTCOMOBJS = test/common/test_rsc_to_csc.o
 

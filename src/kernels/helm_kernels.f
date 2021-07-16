@@ -282,28 +282,3 @@ c
 c
 c
 c
-      subroutine l2d_dlp(srcinfo,ndt,targinfo,ndd,dpars,ndz,zk,
-     1   ndi,ipars,u)
-      implicit real *8 (a-h,o-z)
-      integer ipars
-      real *8 pi,dpars,srcinfo(8),targinfo(2)
-      complex *16 u,ima,z,zinv
-      complex *16 dipstr
-      data ima/(0.0d0,1.0d0)/
-
-      dipstr = dcmplx(srcinfo(7),srcinfo(8))
-      pi = 4.0d0*datan(1.0d0)
-c
-      xdiff = targinfo(1)-srcinfo(1)
-      ydiff = targinfo(2)-srcinfo(2)
-      z = dcmplx(xdiff,ydiff)
-      if(abs(z).le.1.0d-16) goto 1000
-      zinv = 1/z
-      u= zinv*dipstr/(2*pi)
-c
-1000  continue
-      return
-      end
-c
-c
-
