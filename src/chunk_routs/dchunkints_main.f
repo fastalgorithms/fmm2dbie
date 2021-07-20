@@ -127,7 +127,7 @@ c-----------------------------------
      1     nporder,fker,ndd,dpars,ndz,zpars,ndi,ipars,nqorder,ts0,w0,
      2     vals,nnmax,eps,dintvals(1,i),maxdepth,maxrec,numit,value2,
      3     value3)
-        print *, i,numit
+c        print *, i,numit
       enddo
 
       return

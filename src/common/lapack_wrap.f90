@@ -797,3 +797,34 @@ subroutine zrmatmatt(m, n, a, k, b, c)
 end subroutine zrmatmatt
 
 
+
+
+
+
+
+subroutine dmatmatt(m, n, a, k, b, c)
+  !
+  ! c = b^T a
+  !
+  implicit double precision (a-h,o-z)
+  real *8 :: a(n,m),c(k,m)
+  real *8 :: b(n,k)
+  character *1 :: transa, transb
+  complex *16 :: alpha, beta
+
+
+  !
+  ! note different dimensions than usual...
+  !
+  transa = 'T'
+  transb = 'N'
+  alpha = 1
+  beta = 0
+
+  call dgemm(transa, transb, k, m, n, alpha, b, n, a, n, &
+      beta, c, k)
+
+  return
+end subroutine dmatmatt
+
+
