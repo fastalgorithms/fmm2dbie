@@ -29,7 +29,8 @@ subroutine chunk_interior(nch,norders,ixys,iptype,npts, &
   !
   implicit real *8 (a-h,o-z)
   real *8 :: srcvals(8,npts), srccoefs(6,npts), targs(ndt,nt)
-  integer :: inflag(nt), ixys(nch+1), iptype(nch), norders(nch)
+  integer :: ixys(nch+1), iptype(nch), norders(nch)
+  integer :: inflag(nt)
   complex *16, allocatable :: dipstr(:), pot(:), pottarg(:)
   real *8, allocatable :: wts(:),src(:,:),srcwid(:), &
        cms(:,:),rads(:),targ1(:,:),ts_targ(:),dist_targ(:), &
@@ -67,7 +68,7 @@ subroutine chunk_interior(nch,norders,ixys,iptype,npts, &
      targ1(2,i) = targs(2,i)
   enddo
 
-  eps = 1d-12
+  eps = 1d-3
   call cpu_time(t1)
   !$ t1 = omp_get_wtime()  
   call cfmm2d_st_d_p(eps,npts,src, &
@@ -77,7 +78,7 @@ subroutine chunk_interior(nch,norders,ixys,iptype,npts, &
 
   ! anything within tol of 1 is inside
   ! anything within tol of 0 is outside
-  tol = 1d-5
+  tol = 1d-2
 
   allocate(icheck(nt))
   
@@ -138,9 +139,9 @@ subroutine chunk_interior(nch,norders,ixys,iptype,npts, &
 
      if (ich .le. 0) then
         ! failed, revert to best guess
-        inout = 1
+        inout0 = 1
         if (abs(pottarg(irel)) .lt. abs(pottarg(irel)-1)) &
-             inout = -1
+             inout0 = -1
      else
         k = norders(ich)
         kord = k-1
@@ -158,12 +159,12 @@ subroutine chunk_interior(nch,norders,ixys,iptype,npts, &
         
         c = (x-xt)*dy-(y-yt)*dx
 
-        inout = -1
-        if (c .ge. 0) inout = 1
+        inout0 = -1
+        if (c .ge. 0) inout0 = 1
         
      endif
 
-     inflag(irel) = inout
+     inflag(irel) = inout0
   enddo
    
   

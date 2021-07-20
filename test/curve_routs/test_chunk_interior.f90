@@ -99,9 +99,11 @@ subroutine testit(isuccess)
      targs(2,i)=y
   enddo
   
+  call cpu_time(t1)
   call chunk_interior(nch,norders,ixys,iptype,npts, &
        srcvals,srccoefs,targs,ndt,nt,inflag)
-
+  call cpu_time(t2)
+  call prin2('time taken in near target generation=*',t2-t1,1)
 
   ! check values
 

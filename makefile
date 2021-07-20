@@ -16,9 +16,6 @@ FFLAGS = -fPIC -O3 -march=native -funroll-loops -std=legacy
 OMPFLAGS =-fopenmp
 OMPLIBS =-lgomp 
 
-OMPFLAGS=
-OMPLIBS=
-
 FMMBIE_INSTALL_DIR=$(PREFIX)
 ifeq ($(PREFIX),)
 	FMMBIE_INSTALL_DIR = ${HOME}/lib
@@ -44,18 +41,31 @@ LFMMLINKLIB = -lfmm2d
 LLINKLIB = -lfmm2dbie
 
 
+# flags for MATLAB MEX compilation..
+MFLAGS=-largeArrayDims -lgfortran -DMWF77_UNDERSCORE1 -lm  -ldl 
+MWFLAGS=-c99complex 
+
+# location of MATLAB's mex compiler
+MEX=mex
+
+# For experts, location of Mwrap executable
+MWRAP=../../mwrap/mwrap
+MEXLIBS=-lm -lstdc++ -ldl -lgfortran
+
+
 # For your OS, override the above by placing make variables in make.inc
 -include make.inc
 
 # update libs and dynamic libs to include appropriate versions of
 # fmm3d
 #
-# Note: the static library is used for DYLIBS, so that fmm3d 
+# Note: the static library is used for DYLIBS, so that fmm2d 
 # does not get bundled in with the fmm3dbie dynamic library
 #
 LIBS += -L$(FMM_INSTALL_DIR) $(LFMMLINKLIB) 
 DYLIBS += -L$(FMM_INSTALL_DIR) $(LFMMLINKLIB)
 F2PYDYLIBS += -L$(FMM_INSTALL_DIR) $(LFMMLINKLIB)
+MEXLIBS += -L$(FMM_INSTALL_DIR) $(LFMMLINKLIB)
 
 # multi-threaded libs & flags needed
 ifneq ($(OMP),OFF)
@@ -63,11 +73,12 @@ ifneq ($(OMP),OFF)
   LIBS += $(OMPLIBS)
   DYLIBS += $(OMPLIBS)
   F2PYDYLIBS += $(OMPLIBS)
+  MEXLIBS += $(OMPLIBS)
 endif
 
 LIBS += $(LBLAS) $(LDBLASINC)
 DYLIBS += $(LBLAS) $(LDBLASINC)
-
+MEXLIBS += $(LBLAS) $(LDBLASINC)
 
 
 # objects to compile
@@ -213,6 +224,23 @@ TESTCOMOBJS = test/common/test_rsc_to_csc.o
 
 test/common: $(TESTCOMOBJS)
 	$(FC) $(FFLAGS) test/common/test_rsc_to_csc.f -o test/common/int2-rsc lib-static/$(STATICLIB) $(LIBS)
+
+
+#
+# matlab..
+#
+MWRAPFILE = curve_routs
+GATEWAY = $(MWRAPFILE)
+
+
+matlab:	$(STATICLIB) matlab/$(GATEWAY).c 
+	$(MEX) matlab/$(GATEWAY).c lib-static/$(STATICLIB) $(MFLAGS) -output matlab/curve_routs $(MEXLIBS);
+
+
+mex:  $(STATICLIB)
+	cd matlab;  $(MWRAP) $(MWFLAGS) -list -mex $(GATEWAY) -mb $(MWRAPFILE).mw;\
+	$(MWRAP) $(MWFLAGS) -mex $(GATEWAY) -c $(GATEWAY).c $(MWRAPFILE).mw;\
+	$(MEX) $(GATEWAY).c ../lib-static/$(STATICLIB) $(MFLAGS) -output $(MWRAPFILE) $(MEXLIBS); \
 
 #
 # housekeeping routines
