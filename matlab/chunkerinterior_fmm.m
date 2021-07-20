@@ -34,6 +34,10 @@ function in = chunkerinterior_fmm(chnkr,pts)
   srcvals(5,:) = srcvals(5,:).*hrep.^2;
   srcvals(6,:) = srcvals(6,:).*hrep.^2;
 
+  rnorms = normals(chnkr);
+  rnorms = reshape(rnorms,[2,npts]);
+  srcvals(7:8,:) = rnorms;
+
   srccoefs = zeros(6,npts);
   [rc,dc,d2c] = exps(chnkr);
   srccoefs(1:2,:) = reshape(rc,[2,npts]);
@@ -54,3 +58,7 @@ function in = chunkerinterior_fmm(chnkr,pts)
   in = abs(inflag-1) < abs(inflag+1);
 
 end  
+
+
+
+

@@ -86,7 +86,7 @@ MEXLIBS += $(LBLAS) $(LDBLASINC)
 # Common objects
 COM = src/common
 COMOBJS = $(COM)/hkrand.o \
-	$(COM)/dlaran.o $(COM)/lapack_wrap.o \
+	$(COM)/dlaran.o $(COM)/lapack_wrap.o $(COM)/lapack_f77.o \
 	$(COM)/legeexps.o $(COM)/prini_new.o \
 	$(COM)/pyplot.o \
 	$(COM)/sort.o \

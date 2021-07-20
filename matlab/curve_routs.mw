@@ -34,6 +34,10 @@
   srcvals(5,:) = srcvals(5,:).*hrep.^2;
   srcvals(6,:) = srcvals(6,:).*hrep.^2;
 
+  rnorms = normals(chnkr);
+  rnorms = reshape(rnorms,[2,npts]);
+  srcvals(7:8,:) = rnorms;
+
   srccoefs = zeros(6,npts);
   [rc,dc,d2c] = exps(chnkr);
   srccoefs(1:2,:) = reshape(rc,[2,npts]);
@@ -53,3 +57,70 @@
   in = abs(inflag-1) < abs(inflag+1);
 
 end  
+
+
+
+
+@function [flag,corr] = get_flags_corr_fast(chnkr,zk,targs)
+%
+%
+
+  nch = chnkr.nch;
+  nchp1 = nch+1;
+  k = chnkr.k;
+  npts = nch*k;
+
+  srcvals = zeros(8,npts);
+  hrep = reshape(repmat(chnkr.h,[1,k])',[npts,1])';
+  srcvals(1:2,:) = reshape(chnkr.r,[2,npts]);
+  srcvals(3:4,:) = reshape(chnkr.d,[2,npts]);
+  srcvals(3,:) = srcvals(3,:).*hrep;
+  srcvals(4,:) = srcvals(4,:).*hrep;
+  srcvals(5:6,:) = reshape(chnkr.d2,[2,npts]);
+  srcvals(5,:) = srcvals(5,:).*hrep.^2;
+  srcvals(6,:) = srcvals(6,:).*hrep.^2;
+  rnorms = normals(chnkr);
+  rnorms = reshape(rnorms,[2,npts]);
+  srcvals(7:8,:) = rnorms;
+
+
+  srccoefs = zeros(6,npts);
+  [rc,dc,d2c] = exps(chnkr);
+  srccoefs(1:2,:) = reshape(rc,[2,npts]);
+  srccoefs(3:4,:) = reshape(dc,[2,npts]);
+  srccoefs(3,:) = srccoefs(3,:).*hrep;
+  srccoefs(4,:) = srccoefs(4,:).*hrep;
+  srccoefs(5:6,:) = reshape(d2c,[2,npts]);
+  srccoefs(5,:) = srccoefs(5,:).*hrep.^2;
+  srccoefs(6,:) = srccoefs(6,:).*hrep.^2;
+  
+  ixys = 1:k:(npts+1);
+  norders = k*ones(nch,1);
+  iptype = ones(nch,1);
+  [ndt,nt] = size(targs);
+  cms = zeros(2,nch);
+  rads = zeros(nch,1);
+
+  # FORTRAN get_centroid_rads2d(int[1] nch, int[nch] norders, int[nchp1] ixys, int[nch] iptype, int[1] npts, double[6,npts] srccoefs, double[8,npts] srcvals, inout double[2,nch] cms, inout double[nch] rads);
+  rad_near = rads*1.1;
+
+  nnz = 0;
+  # FORTRAN findnear2dmem(double[2,nch] cms, int[1] nch, double[nch] rad_near, int[1] ndt, double[ndt,nt] targs, int[1] nt, inout int[1] nnz);
+
+  nquad = nnz*k;
+  wnear = complex(zeros(nquad,1));
+  iind = zeros(nquad,1);
+  jind = zeros(nquad,1);
+
+  zkuse = complex(zk);
+  # FORTRAN getnearquad_helm_comb_dir_2d_matlab(int[1] nch, int[nch] norders, int[nchp1] ixys, int[nch] iptype, int[1] npts, double[6,npts] srccoefs, double[8,npts] srcvals, int[1] ndt, int[1] nt, double[ndt,nt] targs, double[2,nch] cms, double[nch] rad_near, int[1] nnz, int[1] nquad, dcomplex[1] zkuse, inout dcomplex[nquad] wnear, inout int[nquad] iind, inout int[nquad] jind);
+
+  flag = [];
+  corr = sparse(iind,jind,wnear,nt,npts);
+
+
+end  
+
+
+
+

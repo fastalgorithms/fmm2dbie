@@ -1124,3 +1124,178 @@ c
 c
 c
 c        
+
+
+
+      subroutine getnearquad_helm_comb_dir_2d_matlab(nch,norders,
+     1   ixys,iptype,npts,srccoefs,srcvals,ndtarg,ntarg,targs,cms,
+     2   rad_near,nnz,nquad,zk,wnear,iind,jind)
+c
+c------------------------------
+c  This subroutine generates the near field quadrature 
+c  for the representation 
+c
+c
+c  .. math ::
+c  
+c      u = (i \mathcal{S}_{k} + \mathcal{D}_{k})
+c
+c  Note: For targets on the boundary, this routine only computes
+c  the principal value part, the identity term corresponding to the jump
+c  in the layer potential is not included in the quadrature.
+c
+c  Currently, the only scheme available for computing the quadrature
+c  is adaptive integration
+c
+c  Input arguments:
+c    - nch: integer
+c        number of chunks
+c    - norders: integer(nch)
+c        order of discretization on each patch 
+c    - ixys: integer(nch+1)
+c        starting location of data on patch i
+c    - iptype: integer(nch)
+c        type of patch
+c        iptype = 1 -> chunk discretized with Gauss Legendre nodes
+c    - npts: integer
+c        total number of discretization points on the boundary
+c    - srccoefs: real *8 (6,npts)
+c        basis coefficients of x,y,dxdt,dydt,dxdt2,dydt2
+c        if(iptype.eq.1) then basis = legendre polynomials
+c    - srcvals: real *8 (8,npts)
+c        x,y,dxdt,dydt,dxdt2,dydt2,rnx,rny at the discretization nodes
+c    - ndtarg: integer
+c        leading dimension of target array
+c    - ntarg: integer
+c        number of targets
+c    - targs: real *8 (ndtarg,ntarg)
+c        target information, the first two components must be
+c        xy coordinates
+c    - nquad: integer
+c        number of entries in wnear
+c
+c  Output
+c
+c    - wnear: complex *16(nquad)
+c        the desired near field quadrature
+c    - iind: integer(nquad)
+c        row indices of wnear
+c    - jind: integer(nquad)
+c        column indices of wnear
+c               
+c
+
+      implicit none 
+      integer, intent(in) :: nch,norders(nch),npts,nquad
+      integer, intent(in) :: ixys(nch+1),iptype(nch)
+      real *8, intent(in) :: srccoefs(6,npts),srcvals(8,npts)
+      integer, intent(in) :: ndtarg,ntarg
+      real *8, intent(in) :: targs(ndtarg,ntarg)
+      real *8, intent(in) :: cms(2,nch),rad_near(nch)
+      integer, intent(in) :: nnz
+      integer, allocatable :: ich_id(:)
+      real *8, allocatable :: ts_targ(:)
+      complex *16 :: zpars(3),zk
+      integer, allocatable :: row_ptr(:),col_ind(:),iquad(:)
+      integer iquadtype
+      complex *16, intent(out) :: wnear(nquad)
+      integer, intent(out) :: iind(nquad),jind(nquad)
+      real *8 rfac
+      real *8, allocatable :: qwts(:)
+
+
+      integer ipars
+      integer ndd,ndz,ndi
+      real *8 dpars,eps
+
+      complex *16 alpha,beta,ima,val
+      integer i,j,l,norder,ich
+      integer ipv
+      data ima/(0.0d0,1.0d0)/
+
+      procedure (), pointer :: fker
+      external h2d_slp, h2d_dlp, h2d_comb
+
+c
+c
+c        initialize the appropriate kernel function
+c
+
+      iquadtype = 1
+      alpha = ima
+      beta = 1.0d0
+      eps = 1.0d-7
+      zpars(1) = zk
+      zpars(2) = alpha
+      zpars(3) = beta
+
+
+      allocate(ich_id(ntarg),ts_targ(ntarg))
+
+C$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(i)
+      do i=1,ntarg
+        ich_id(i) = -1
+        ts_targ(i) = 0.0d0
+      enddo
+C$OMP END PARALLEL DO     
+
+      allocate(row_ptr(ntarg+1),col_ind(nnz))
+      
+      call findnear2d(cms,nch,rad_near,ndtarg,targs,ntarg,row_ptr, 
+     1        col_ind)
+      allocate(iquad(nnz+1)) 
+      call get_iquad_rsc2d(nch,ixys,ntarg,nnz,row_ptr,col_ind,
+     1         iquad)
+
+C$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(i,j,ich,norder,l)      
+      do i=1,ntarg
+        do j=row_ptr(i),row_ptr(i+1)-1
+          ich = col_ind(j)
+          norder = norders(ich)
+          do l=1,norder
+            iind(iquad(j)+l-1) = i
+            jind(iquad(j)+l-1) = ixys(ich)+l-1 
+          enddo
+        enddo
+      enddo
+C$OMP END PARALLEL DO      
+
+      wnear = 0
+      ndz = 3
+      ndi = 0
+      ndd = 0
+      if(iquadtype.eq.1) then
+        fker => h2d_comb
+        if(abs(alpha).ge.1.0d-16.and.abs(beta).lt.1.0d-16) then
+          fker=>h2d_slp
+        else if(abs(alpha).lt.1.0d-16.and.abs(beta).ge.1.0d-16) then
+          fker=>h2d_dlp
+        endif
+        ipv = 0
+        
+
+        call zgetnearquad_adap_guru2d(nch,norders,ixys,
+     1     iptype,npts,srccoefs,srcvals,ndtarg,ntarg,targs,
+     1     ich_id,ts_targ,eps,ipv,fker,ndd,dpars,ndz,zpars,
+     1     ndi,ipars,nnz,row_ptr,col_ind,iquad,nquad,wnear)
+      endif
+
+      allocate(qwts(npts))
+      call get_qwts2d(nch,norders,ixys,iptype,npts,
+     1        srcvals,qwts)
+     
+C$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(i,j,l,val)
+      do l=1,nquad
+        i = iind(l)
+        j = jind(l)
+        call h2d_comb(srcvals(1,j),ndtarg,targs(1,i),ndd,dpars,
+     1    ndz,zpars,ndi,ipars,val)
+        wnear(l) = wnear(l) - val*qwts(j)
+
+      enddo
+C$OMP END PARALLEL DO
+
+
+      return
+      end
+
