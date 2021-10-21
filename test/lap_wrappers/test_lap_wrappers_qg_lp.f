@@ -87,7 +87,6 @@
       call get_qwts2d(nch,norders,ixys,iptype,npts,srcvals,wts)
 
 
-
       allocate(cms(2,nch),rads(nch),rad_near(nch))
       allocate(pot(npts),potslp(npts),potdlp(npts))
 
@@ -142,6 +141,7 @@ c
 
       nquad = iquad(nnz+1)-1
       allocate(slp_near(nquad),dlp_near(nquad))
+
 
 
       ndtarg = 2

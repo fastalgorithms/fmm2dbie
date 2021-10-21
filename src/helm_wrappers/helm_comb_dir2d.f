@@ -682,18 +682,18 @@ C$OMP$PRIVATE(ctmp2,dtmp2,dipvec2,nss,l,jstart,ii,val,npover)
 
         val = 0
         if(ifcharge.eq.1.and.ifdipole.eq.0) then
-          call h2d_directcp_vec(nd,zpars(1),srctmp2,nss,ctmp2,
-     1        targvals(1,i),val,thresh)
+          call h2d_directcp(nd,zpars(1),srctmp2,nss,ctmp2,
+     1        targvals(1,i),1,val,thresh)
         endif
 
         if(ifcharge.eq.0.and.ifdipole.eq.1) then
-          call h2d_directdp_vec(nd,zpars(1),srctmp2,nss,dtmp2,
-     1          dipvec2,targvals(1,i),val,thresh)
+          call h2d_directdp(nd,zpars(1),srctmp2,nss,dtmp2,
+     1          dipvec2,targvals(1,i),1,val,thresh)
         endif
 
         if(ifcharge.eq.1.and.ifdipole.eq.1) then
-          call h2d_directcdp_vec(nd,zpars(1),srctmp2,nss,ctmp2,dtmp2,
-     1          dipvec2,targvals(1,i),val,thresh)
+          call h2d_directcdp(nd,zpars(1),srctmp2,nss,ctmp2,dtmp2,
+     1          dipvec2,targvals(1,i),1,val,thresh)
         endif
         pot(i) = pot(i) - val
       enddo
