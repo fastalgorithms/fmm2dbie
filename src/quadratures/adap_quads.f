@@ -172,7 +172,7 @@ C$OMP$PRIVATE(ts,umat,vmat,wts,kk,ztmp)
      2          dpars,ndz,zpars,ndi,ipars,nchmax,zints)
             endif
           endif
-          call zrmatmatt(1,norders(ich),zints,norders(ich),umat,
+          call zrmatmatt_f77(1,norders(ich),zints,norders(ich),umat,
      1       wnear(iquad(iper(j))))
         enddo
         deallocate(ts,umat,vmat,wts)
