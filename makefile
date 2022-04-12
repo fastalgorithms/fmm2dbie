@@ -10,7 +10,7 @@
 CC = gcc
 CXX = g++
 FC = gfortran
-FFLAGS = -fPIC -O3 -march=native -funroll-loops -std=legacy 
+FFLAGS = -fPIC -O3 -march=native -funroll-loops -std=legacy
 
 # extra flags for multithreaded: C/Fortran, MATLAB
 OMPFLAGS =-fopenmp
@@ -101,7 +101,8 @@ SOBJS = $(SURF)/chunks.o $(SURF)/curve_routs.o \
 # Quadrature wrappers
 QUAD = src/quadratures
 QOBJS = $(QUAD)/near_field_routs.o $(QUAD)/adap_quads.o \
-	$(QUAD)/self_quads2d.o
+	$(QUAD)/self_quads2d.o $(QUAD)/ggq2dstd_quads.o \
+	$(QUAD)/ggq2dmatbuild.o
 
 # Chunk adaptive integration routines
 CHUNK = src/chunk_routs
@@ -196,7 +197,9 @@ test: $(STATICLIB) test/curv test/chunk test/quad test/helm test/near-point test
 	cd test/chunk_routs; ./int2-chunk
 	cd test/quadratures; ./int2-quad
 	cd test/helm_wrappers; ./int2-helm
+	cd test/helm_wrappers; ./int2-helm-mat
 	cd test/lap_wrappers; ./int2-lap
+	cd test/lap_wrappers; ./int2-lap-mat
 	cat print_testres.txt
 	rm print_testres.txt
 
@@ -222,11 +225,13 @@ QTOBJS = test/quadratures/test_near_field_routs.o test/quadratures/test_self_ada
 test/quad: $(QTOBJS)
 	$(FC) $(FFLAGS) test/quadratures/test_quadratures.f -o test/quadratures/int2-quad $(QTOBJS) lib-static/$(STATICLIB) $(LIBS)
 
-test/helm:
+test/helm: 
 	$(FC) $(FFLAGS) test/helm_wrappers/test_helm_wrappers_qg_lp.f -o test/helm_wrappers/int2-helm lib-static/$(STATICLIB) $(LIBS)
+	$(FC) $(FFLAGS) test/helm_wrappers/test_helm_zmatbuild.f -o test/helm_wrappers/int2-helm-mat lib-static/$(STATICLIB) $(LIBS)
 
-test/lap:
+test/lap: 
 	$(FC) $(FFLAGS) test/lap_wrappers/test_lap_wrappers_qg_lp.f -o test/lap_wrappers/int2-lap lib-static/$(STATICLIB) $(LIBS)
+	$(FC) $(FFLAGS) test/lap_wrappers/test_lap_dmatbuild.f -o test/lap_wrappers/int2-lap-mat lib-static/$(STATICLIB) $(LIBS)
 
 TESTCOMOBJS = test/common/test_rsc_to_csc.o
 
