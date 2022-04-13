@@ -294,8 +294,8 @@
             zd2 = dx2 + ima*dy2
             finterpex(2,i) = dimag(zd2*dconjg(zd))**2/abs(zd)**5
             rk = abs(imag(zd2/zd)/finterpex(1,i))+1
-            if(rk.gt.rkmax) rkmax = rk
-            if(rk.lt.rkmin) rkmin = rk
+            !if(rk.gt.rkmax) rkmax = rk
+            !if(rk.lt.rkmin) rkmin = rk
             
           enddo
 

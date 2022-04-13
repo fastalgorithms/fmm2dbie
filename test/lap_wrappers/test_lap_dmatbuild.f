@@ -19,7 +19,8 @@ c
       integer, allocatable :: ich_id(:),inode_id(:)
       real *8, allocatable :: ts_targ(:)
       real *8, allocatable :: ab(:,:)
-      real *8 xyz_out(2),xyz_in(2)
+      real *8 xyz_out(2)
+      real *8, allocatable :: xyz_in(:,:)
       real *8, allocatable :: sigma(:)
       complex * 16 zpars(3)
       real *8 dpars(2)
@@ -73,12 +74,21 @@ c
       xyz_out(1) = 3.17d0
       xyz_out(2) = -0.03d0
 
-      xyz_in(1) = 0.17d0
-      xyz_in(2) = 0.23d0
-
-      ntin = 1
+      ntest = 1000
+      allocate(xyz_in(2,ntest))
+      iseed = 1234
+      dburn = hkrand(iseed)
+      do i = 1,ntest
+         tt = hkrand(0)
+         radfac = hkrand(0)
+         call fstarn_simple(tt,ndd,dpars,ndz,zpars,ndi,ipars,xx,
+     1        yy,dum1,dum2,dum3,dum4)
+         
+         xyz_in(1,i) = xx*radfac
+         xyz_in(2,i) = yy*radfac
+      enddo
       
-      allocate(sigma(npts),ubdry(npts),uin(ntin))
+      allocate(sigma(npts),ubdry(npts),uin(ntest))
 
 c     get boundary data
       
@@ -88,9 +98,11 @@ c     get boundary data
       enddo
 
 c     test data
-      
-      call l2d_slp(xyz_out,2,xyz_in,0,dpars,0,zpars,0,
-     1     ipars,uin)
+
+      do i = 1,ntest
+         call l2d_slp(xyz_out,2,xyz_in(1,i),0,dpars,0,zpars,0,
+     1        ipars,uin(i))
+      enddo
 
 
 c     build system matrix (-1/2 I + D)
@@ -142,8 +154,8 @@ c     build system matrix (-1/2 I + D)
         targs(2,i) = srcvals(2,i)
       enddo
 
-      allocate(ich_id(npts),ts_targ(npts))
-      do i=1,npts
+      allocate(ich_id(npts+ntest),ts_targ(npts+ntest))
+      do i=1,(npts+ntest)
         ich_id(i) = -1
         ts_targ(i) = 0
       enddo
@@ -151,22 +163,21 @@ c     build system matrix (-1/2 I + D)
       dpars(1) = 0
       dpars(2) = 1
 
-      allocate(potbdry(npts),potin(ntin))
+      allocate(potbdry(npts),potin(ntest))
       
       call lpcomp_lap_comb_dir_2d(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,ich_id,
      2     ts_targ,eps,dpars,sigma,potbdry)
 
       ndtarg2 = 2
-      n1 = 1
       call lpcomp_lap_comb_dir_2d(nch,norders,ixys,
-     1     iptype,npts,srccoefs,srcvals,ndtarg2,n1,xyz_in,ich_id,
+     1     iptype,npts,srccoefs,srcvals,ndtarg2,ntest,xyz_in,ich_id,
      2     ts_targ,eps,dpars,sigma,potin)
 
       call prin2('pot in *',potin,1)
       call prin2('u in *',uin,1)
 
-      write(*,*) abs(potin-uin)
+      write(*,*) abs(potin(1)-uin(1))
 
       nsuccess = 0
       if (abs(potin(1)-uin(1)) .lt. eps) nsuccess=1

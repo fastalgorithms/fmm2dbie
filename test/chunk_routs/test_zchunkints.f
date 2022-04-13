@@ -91,8 +91,8 @@ c
       ra = 0
       do i=1,ntarg
         do j=1,3
-          ra = ra + zintvalsex(j,i)**2
-          erra = erra + (zintvals(j,i)-zintvalsex(j,i))**2
+          ra = ra + abs(zintvalsex(j,i))**2
+          erra = erra + abs(zintvals(j,i)-zintvalsex(j,i))**2
         enddo
       enddo
       erra = sqrt(erra/ra)

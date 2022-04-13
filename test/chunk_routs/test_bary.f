@@ -74,6 +74,7 @@
       dy = srctmp(2) - srcvals(2,1)
       
       r = sqrt(dx**2 + dy**2)
+      rdlp1 = (dx*srctmp(7) + dy*srctmp(8))/r
 
       rdlpex = 0.5d0*r
 

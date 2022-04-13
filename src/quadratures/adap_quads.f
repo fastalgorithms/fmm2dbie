@@ -138,7 +138,7 @@ c
      1  iper)
 
 C$OMP PARALLEL DO
-      do i=1,quad
+      do i=1,nquad
         wnear(i) = 0
       enddo
 C$OMP END PARALLEL DO      
@@ -486,7 +486,7 @@ c
      1  iper)
 
 C$OMP PARALLEL DO
-      do i=1,quad
+      do i=1,nquad
         wnear(i) = 0
       enddo
 C$OMP END PARALLEL DO      
