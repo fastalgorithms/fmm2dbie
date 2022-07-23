@@ -72,7 +72,7 @@ subroutine chunk_interior(nch,norders,ixys,iptype,npts, &
   call cpu_time(t1)
   !$ t1 = omp_get_wtime()  
   call cfmm2d_st_d_p(eps,npts,src, &
-       dipstr,pot,nt,targ1,pottarg)
+       dipstr,pot,nt,targ1,pottarg,ier)
   call cpu_time(t2)
   !$ t2 = omp_get_wtime()    
 
