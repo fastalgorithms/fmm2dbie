@@ -117,7 +117,7 @@ LAP = src/lap_wrappers
 LOBJS = $(LAP)/lap_comb_dir2d.o
 
 KERN = src/kernels
-KOBJS = $(KERN)/helm_kernels.o $(KERN)/lap_kernels.o
+KOBJS = $(KERN)/helm_kernels.o $(KERN)/lap_kernels.o $(KERN)/helm_kernels_stab.o
 
 OBJS = $(COMOBJS) $(SOBJS) $(COBJS) $(QOBJS) $(HOBJS) $(KOBJS) $(LOBJS)
 

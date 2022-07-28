@@ -19,7 +19,7 @@ c
       ifexpon = 1
       call hank103(z,h0,h1,ifexpon)
 
-      ztmp = -zs*zk*h1*rr
+      ztmp = zs*zk*h1*rr
 
       
       u = zpars(3)*ztmp*rdotns + zpars(2)*zs*h0
