@@ -1299,7 +1299,7 @@ c
 	    if (icmp .eq. 1) then
            write(iun87,'(a,e25.19,a,e25.19,a,e25.19,a,e25.19,a)')
      1      'pt.imshow(x, extent=[',x1,',',x2,',',y1,',',y2,
-     2      '],cmap = "heat")'
+     2      '],cmap = "hot")'
 
 	    elseif(icmp .eq. 2) then
            write(iun87,'(a,f5.2,a,f5.2,a,f5.2,a,f5.2,a)')
