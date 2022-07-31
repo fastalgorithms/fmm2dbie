@@ -91,7 +91,7 @@ COMOBJS = $(COM)/hkrand.o \
 	$(COM)/pyplot.o \
 	$(COM)/sort.o \
 	$(COM)/sparse_reps.o $(COM)/rotmat_gmres.o \
-	$(COM)/get_fmm2d_thresh.o \
+	$(COM)/get_fmm2d_thresh.o $(COM)/lege_extras.o \
 
 # Surface wrappers
 SURF = src/curve_routs
@@ -102,7 +102,7 @@ SOBJS = $(SURF)/chunks.o $(SURF)/curve_routs.o \
 QUAD = src/quadratures
 QOBJS = $(QUAD)/near_field_routs.o $(QUAD)/adap_quads.o \
 	$(QUAD)/self_quads2d.o $(QUAD)/ggq2dstd_quads.o \
-	$(QUAD)/ggq2dmatbuild.o
+	$(QUAD)/ggq2dmatbuild.o $(QUAD)/ellipseprecisiontabs.o
 
 # Chunk adaptive integration routines
 CHUNK = src/chunk_routs
