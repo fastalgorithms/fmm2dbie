@@ -121,7 +121,8 @@ STOK = src/stok_wrappers
 STOBJS = $(STOK)/stok_comb_vel2d.o
 
 KERN = src/kernels
-KOBJS = $(KERN)/helm_kernels.o $(KERN)/lap_kernels.o $(KERN)/stok_kernels.o
+KOBJS = $(KERN)/helm_kernels.o $(KERN)/lap_kernels.o $(KERN)/helm_kernels_stab.o  $(KERN)/stok_kernels.o
+
 
 OBJS = $(COMOBJS) $(SOBJS) $(COBJS) $(QOBJS) $(HOBJS) $(KOBJS) $(LOBJS) $(STOBJS)
 
