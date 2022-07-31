@@ -130,12 +130,7 @@ OBJS = $(COMOBJS) $(SOBJS) $(COBJS) $(QOBJS) $(HOBJS) $(KOBJS) $(LOBJS) $(STOBJS
 
 .PHONY: usage lib install test test-dyn python 
 
-short-circuit: $(STATICLIB) test/stok
-	cd test/stok_wrappers; ./int2-stok
-
-
-#default: usage
-default: short-circuit
+default: usage
 
 usage:
 	@echo "-------------------------------------------------------------------------"
