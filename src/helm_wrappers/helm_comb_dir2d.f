@@ -507,7 +507,7 @@ c
       integer, intent(in) :: nnz,row_ptr(ntarg+1),col_ind(nnz),nquad
       integer, intent(in) :: iquad(nnz+1)
       complex *16, intent(in) :: wnear(nquad),sigma(npts)
-      integer, intent(in) :: novers(nch+1)
+      integer, intent(in) :: novers(nch)
       integer, intent(in) :: nptso
       real *8, intent(in) :: srcover(8,nptso),whtsover(nptso)
       complex *16, intent(out) :: pot(ntarg)
