@@ -184,14 +184,14 @@ c
         implicit real *8 (a-h,o-z)
         real *8 x(1),y(1),x2(1),y2(1)
         character *1 a1,a10,file1(11),file2(11),file11(9),
-     1      title(1),temp(32)
+     1      title(1),temp(32),file1p(10)
         character *2 ls1,ls2
         character *9 file4
-        character *11 file8,file9
+        character *11 file8,file9,file8p
         character *32 title2
 c
         equivalence (file1,file8), (file11,file4), (temp,title2),
-     1      (file2,file9)
+     1      (file2,file9),  (file1p,file8p)
 c
 c       plots the points determined by x,y using itype style
 c
@@ -211,6 +211,11 @@ c
         file4='plotiw.py'
         file11(5)=a10
         file11(6)=a1
+
+        file8p='plotiw.pdf'
+        file1p(5)=a10
+        file1p(6)=a1
+        
 c
 c       print out the contents of the scripting file, plotiw.py
 c
@@ -255,7 +260,8 @@ c
         write(iun87,'(a,a,a)') 'pt.plot(x1,x2,"',ls1,'")'
         write(iun87,'(a,a,a)') 'pt.plot(y1,y2,"',ls2,'")'
         write(iun87,'(a,a,a)') 'pt.title("', title2, '")'
-        write(iun87,'(a)') 'pt.show()'
+        write(iun87, '(a)') 'pt.axes().set_aspect("equal")'
+        write(iun87,'(a,a,a)') 'pt.savefig("',file8p,'")'
 
 c
 c       now print out the data file, plotiw.dat
@@ -345,8 +351,8 @@ c
         if (itype2 .eq. 3) ls2='g-'
 c
         ls3='r.'
-        if (itype3 .eq. 2) ls2='rx'
-        if (itype3 .eq. 3) ls2='r-'
+        if (itype3 .eq. 2) ls3='rx'
+        if (itype3 .eq. 3) ls3='r-'
 c
 
         write(iun87,'(a)') '#!/usr/bin/python'
@@ -1283,7 +1289,7 @@ c
         write(iun87,'(a)') '#!/usr/bin/python'
         write(iun87,'(a)') 'import matplotlib.pyplot as pt'
         write(iun87,'(a)') 'import numpy as np'
-	    write(iun87,'(a)') 'import colormaps as cmaps'
+        write(iun87,'(a)') 'import colormap as cmaps'
         write(iun87,'(a)') ''
         write(iun87,'(a)') 'pt.rc("font", size=16)'
         write(iun87,'(a,a,a)') 'x = np.loadtxt("',file8,'")'
@@ -1291,9 +1297,9 @@ c
      1      'x = x.reshape(', m, ',', n, ', order="F")'
 
 	    if (icmp .eq. 1) then
-           write(iun87,'(a,f5.2,a,f5.2,a,f5.2,a,f5.2,a)')
+           write(iun87,'(a,e25.19,a,e25.19,a,e25.19,a,e25.19,a)')
      1      'pt.imshow(x, extent=[',x1,',',x2,',',y1,',',y2,
-     2      '],cmap = "hot")'
+     2      '],cmap = "heat")'
 
 	    elseif(icmp .eq. 2) then
            write(iun87,'(a,f5.2,a,f5.2,a,f5.2,a,f5.2,a)')
