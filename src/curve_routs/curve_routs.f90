@@ -215,60 +215,82 @@ subroutine oversample_geom2d(nch,norders,ixys,iptype,npts,srccoefs, &
   real *8 alpha,beta
 
   integer i,istart,istarto,j,jpt,npols,l,n1,n2,ipt,i1,i2
-  integer itype
+  integer itype, nordermax, nfarmax, nfarfound, ifnfarsame
   real *8 rr
 
   transa = 'n'
   transb = 'n'
   alpha = 1.0d0
   beta = 0.0d0
-  do i=1,nch
-    nfar = nfars(i)
-    norder = norders(i)
-    if(nfar.ne.norder) then
-      if(iptype(i).eq.1) then
-        allocate(ts(nfar),pmat(norder,nfar))
-        itype = 0
-        call legeexps(itype,nfar,ts,umat,vmat,wts)
-        do j=1,nfar
-          call legeexps(ts(j),norder-1,pmat(1,j))
-        enddo
-      endif
 
-      istart = ixys(i)
-      istarto = ixyso(i)
-      call dgemm(transa,transb,6,nfar,norder,alpha, &
-        srccoefs(1,istart),6,pmat,norder,beta,srcover(1,istarto),8)
-      do j=1,nfar
-        jpt = istarto + j-1
-        rr = sqrt(srcvals(3,jpt)**2 + srcvals(4,jpt)**2)
-        srcover(7,jpt) = srcover(4,jpt)/rr
-        srcover(8,jpt) = -srcover(3,jpt)/rr
-      enddo
-      if(iptype(i).eq.1) then
-        n1 = mod(norder,2)
-        n2 = mod(nfar,2)
-        if(n1.eq.1.and.n2.eq.1) then
-          i1 = (norder+1)/2
-          i2 = (nfar+1)/2
-          ipt = ixys(i)+i1-1
-          jpt = ixyso(i)+i2-1
-          do l=1,8
-            srcover(l,jpt) = srcvals(l,ipt)
-          enddo
+  ifnfarsame = 1
+  nfarfound = nfars(1)
+  nfarmax = 0
+  nordermax = 0
+  do i = 1,nch
+     if (nfars(i) .ne. nfarfound) ifnfarsame = 0
+     nfarmax = max(nfarmax,nfars(i))
+     nordermax = max(nordermax,norders(i))
+  enddo
+
+  allocate(ts(nfarmax),pmat(nordermax,nfarmax))
+
+  if (ifnfarsame .eq. 1) then 
+     itype = 0
+     call legeexps(itype,nfarmax,ts,umat,vmat,wts)
+     do j=1,nfarmax
+        call legepols(ts(j),nordermax-1,pmat(1,j))
+     enddo
+  endif
+     
+  do i=1,nch
+     nfar = nfars(i)
+     norder = norders(i)
+     if(nfar.ne.norder) then
+        if(iptype(i).eq.1) then
+           if (ifnfarsame .ne. 1) then
+              itype = 0
+              call legeexps(itype,nfar,ts,umat,vmat,wts)
+              do j=1,nfar
+                 call legepols(ts(j),norder-1,pmat(1,j))
+              enddo
+           endif
         endif
-      endif
-      deallocate(ts,pmat)
-    else
-      istart = ixys(i)
-      istarto = ixyso(i)
-      npols = ixys(i+1)-ixys(i)
-      do j=1,npols
-        do l=1,8
-          srcover(l,j+istarto-1) = srcvals(l,j+istart-1)
+
+        istart = ixys(i)
+        istarto = ixyso(i)
+        call dgemm(transa,transb,6,nfar,norder,alpha, &
+             srccoefs(1,istart),6,pmat,nordermax,beta,srcover(1,istarto),8)
+        do j=1,nfar
+           jpt = istarto + j-1
+           rr = sqrt(srcover(3,jpt)**2 + srcover(4,jpt)**2)
+           srcover(7,jpt) = srcover(4,jpt)/rr
+           srcover(8,jpt) = -srcover(3,jpt)/rr
         enddo
-      enddo
-    endif
+        if(iptype(i).eq.1) then
+           n1 = mod(norder,2)
+           n2 = mod(nfar,2)
+           if(n1.eq.1.and.n2.eq.1) then
+              i1 = (norder+1)/2
+              i2 = (nfar+1)/2
+              ipt = ixys(i)+i1-1
+              jpt = ixyso(i)+i2-1
+              do l=1,8
+                 srcover(l,jpt) = srcvals(l,ipt)
+              enddo
+           endif
+        endif
+
+     else
+        istart = ixys(i)
+        istarto = ixyso(i)
+        npols = ixys(i+1)-ixys(i)
+        do j=1,npols
+           do l=1,8
+              srcover(l,j+istarto-1) = srcvals(l,j+istart-1)
+           enddo
+        enddo
+     endif
   enddo
 
 end subroutine oversample_geom2d
@@ -436,21 +458,35 @@ subroutine get_qwts2d(nch,norders,ixys,iptype,npts,srcvals,qwts)
 
   real *8, allocatable :: wts(:),ts(:)
   real *8 u,v,ds
-  integer itype,istart,ich,i,j,k
+  integer itype,istart,ich,i,j,k,norder,norderfound,nordermax
+  integer ifallsame
 
+  norderfound = norders(1)
+  nordermax = norders(1)
+  ifallsame=1
+  do i = 2,nch
+     norder=norders(i)
+     if (norder .ne. norderfound) ifallsame=0
+     nordermax=max(nordermax,norder)
+  enddo
+
+  allocate(wts(nordermax),ts(nordermax))
+  if (ifallsame .eq. 1) then
+     itype = 1
+     call legeexps(itype,norderfound,ts,u,v,wts)
+  endif
+  
   do ich=1,nch
     istart = ixys(ich)
     k = ixys(ich+1)-ixys(ich)
-    allocate(wts(k),ts(k))
-    if(iptype(ich).eq.1) then
+    if(iptype(ich).eq.1 .and. ifallsame .ne. 1) then
       itype = 1
       call legeexps(itype,k,ts,u,v,wts)
     endif
     do j=1,k
       ds = sqrt(srcvals(3,istart+j-1)**2 + srcvals(4,istart+j-1)**2)
       qwts(istart+j-1) = ds*wts(j)
-    enddo
-    deallocate(wts,ts)
+   enddo
   enddo
 
 
