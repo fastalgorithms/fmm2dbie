@@ -116,17 +116,27 @@ HOBJS = $(HELM)/helm_comb_dir2d.o
 LAP = src/lap_wrappers
 LOBJS = $(LAP)/lap_comb_dir2d.o
 
-KERN = src/kernels
-KOBJS = $(KERN)/helm_kernels.o $(KERN)/lap_kernels.o $(KERN)/helm_kernels_stab.o
+# Laplace wrappers
+STOK = src/stok_wrappers
+STOBJS = $(STOK)/stok_comb_vel2d.o
 
-OBJS = $(COMOBJS) $(SOBJS) $(COBJS) $(QOBJS) $(HOBJS) $(KOBJS) $(LOBJS)
+KERN = src/kernels
+KOBJS = $(KERN)/helm_kernels.o $(KERN)/lap_kernels.o $(KERN)/helm_kernels_stab.o  $(KERN)/stok_kernels.o
+
+
+OBJS = $(COMOBJS) $(SOBJS) $(COBJS) $(QOBJS) $(HOBJS) $(KOBJS) $(LOBJS) $(STOBJS)
 
 
 
 
 .PHONY: usage lib install test test-dyn python 
 
-default: usage
+short-circuit: $(STATICLIB) test/stok
+	cd test/stok_wrappers; ./int2-stok
+
+
+#default: usage
+default: short-circuit
 
 usage:
 	@echo "-------------------------------------------------------------------------"
@@ -190,7 +200,7 @@ install: $(STATICLIB) $(DYNAMICLIB)
 #
 # testing routines
 #
-test: $(STATICLIB) test/curv test/chunk test/quad test/helm test/near-point test/interior test/lap
+test: $(STATICLIB) test/curv test/chunk test/quad test/helm test/near-point test/interior test/lap test/stok
 	cd test/curve_routs; ./int2-curv
 	cd test/curve_routs; ./int2-near-point
 	cd test/curve_routs; ./int2-chunk-interior
@@ -232,6 +242,9 @@ test/helm:
 test/lap: 
 	$(FC) $(FFLAGS) test/lap_wrappers/test_lap_wrappers_qg_lp.f -o test/lap_wrappers/int2-lap lib-static/$(STATICLIB) $(LIBS)
 	$(FC) $(FFLAGS) test/lap_wrappers/test_lap_dmatbuild.f -o test/lap_wrappers/int2-lap-mat lib-static/$(STATICLIB) $(LIBS)
+
+test/stok: 
+	$(FC) $(FFLAGS) test/stok_wrappers/test_stok_qg_lp.f -o test/stok_wrappers/int2-stok lib-static/$(STATICLIB) $(LIBS)
 
 TESTCOMOBJS = test/common/test_rsc_to_csc.o
 

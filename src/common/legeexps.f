@@ -2281,7 +2281,7 @@ c
 c
         if( (ifodd .eq. 1) .and. (kk .eq. 1) ) then
             ts(kk)=x0
-            whts(kk)=der
+            if(itype .gt. 0) whts(kk)=der
             x0=x1
             x1=ts(kk+1)
             pol3=pol
