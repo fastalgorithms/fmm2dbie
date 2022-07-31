@@ -576,3 +576,40 @@ subroutine get_chunk_scurv(npts,srcvals,dks)
   enddo
 
 end subroutine get_chunk_scurv
+!
+!
+!
+!
+subroutine chunk_to_lapdlpcoef_lege(k,srcvals,ipt,umat,rdlpcoefs)
+  implicit none
+  integer ipt,k
+  real *8 srcvals(8,k),rdlpcoefs(k),umat(k,k),fvals(k)
+  real *8 x,y,rnx,rny,rself,r2,dx,d2x,dy,d2y,alpha,beta,ds
+  integer i,j
+
+  dx = srcvals(3,ipt)
+  dy = srcvals(4,ipt)
+  d2x = srcvals(5,ipt)
+  d2y = srcvals(6,ipt)
+  ds = sqrt(dx**2 + dy**2)
+
+  do i=1,k
+    x = srcvals(1,ipt)-srcvals(1,i)
+    y = srcvals(2,ipt)-srcvals(2,i)
+    rnx = srcvals(7,i)
+    rny = srcvals(8,i)
+    r2 = x**2 + y**2
+    
+    if(i.ne.ipt) then
+       fvals(i) = (x*rnx + y*rny)/r2
+    else
+      fvals(i) = -(dx*d2y-dy*d2x)/2/ds**3 
+    endif
+  enddo
+  alpha = 1.0d0
+  beta = 0.0d0
+  call prin2_long('fvals=*',fvals,k)
+
+  call dgemv('n',k,k,alpha,umat,k,fvals,1,beta,rdlpcoefs,1)
+  return
+end subroutine chunk_to_lapdlpcoef_lege
