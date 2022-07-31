@@ -6,7 +6,11 @@
       character *100 fname
       real *8, allocatable :: uval(:,:),tracval(:,:)
       real *8, allocatable :: pot(:,:),potslp(:,:),potdlp(:,:)
+      real *8, allocatable :: pot2(:,:),potslp2(:,:),potdlp2(:,:)
+      real *8, allocatable :: slpmat(:,:), dlpmat(:,:)
 
+      integer opdims(2)
+      
       integer, allocatable :: norders(:),ixys(:),iptype(:)
 
       integer, allocatable :: ich_id(:)
@@ -20,8 +24,9 @@
       real *8 potin(2), potintrue(2), potslpin(2), potdlpin(2)
       real *8 ts_targ_in(1)
       integer ich_id_in(1)
+      
 
-      external fstarn_simple
+      external fstarn_simple, st2d_slp_wrap, st2d_dlp_wrap
 
 
 
@@ -59,23 +64,23 @@
       dpars(2) = 0.2d0
 
       ipars(1) = 3
-      nover = 1
+      nover = 3
       nch = 0
       ier = 0
-      eps = 1.0d-10
+      eps = 1.0d-12
       call chunkfunc_guru(eps,rlmax,ifclosed,irefinel,irefiner,rlmaxe,
      1  ta,tb,fstarn_simple,ndd,dpars,ndz,zpars,ndi,ipars,nover,
      2  k,nchmax,nch,norders,ixys,iptype,npts,srcvals,srccoefs,ab,adjs,
      3  ier)
 
-
       eps = 1d-8
 
       xyz_out(1) = 3.17d0
-      xyz_out(2) = -0.03d0
+      xyz_out(2) = 1.3d0
 
-      xyz_in(1) = 0.17d0
-      xyz_in(2) = 0.23d0
+      xyz_in(1) = 1.199999d0
+      write(*,*) 1.2d0-xyz_in(1)
+      xyz_in(2) = 0
 
       allocate(targs(2,npts))
       allocate(wts(npts))
@@ -86,8 +91,8 @@
       allocate(uval(2,npts),tracval(2,npts))
       allocate(ich_id(npts),ts_targ(npts))
 
-      musrc(1) = 0.1d0
-      musrc(2) = -0.23d0
+      musrc(1) = 1.1d0
+      musrc(2) = -.23d0
       
       do i=1,npts
          call st2d_slp_vec(4,xyz_out,2,srcvals(1,i),
@@ -99,6 +104,14 @@
          tracval(1,i) = tracmat(1,1)*musrc(1)+tracmat(1,2)*musrc(2)
          tracval(2,i) = tracmat(2,1)*musrc(1)+tracmat(2,2)*musrc(2)
       enddo
+
+      dmaxu1 = 0
+      dmaxu2 = 0
+      do i = 1,npts
+         dmaxu1 = max(dmaxu1,abs(uval(1,i)))
+         dmaxu2 = max(dmaxu2,abs(uval(2,i)))
+      enddo
+      write(*,*) 'max uval', dmaxu1, dmaxu2
 
 c     test just at interior target
       
@@ -112,7 +125,8 @@ c     test just at interior target
       dpars(2) = 0
 
       ntarg1 = 1
-      
+
+      call cpu_time(t1)
       call lpcomp_stok_comb_dir_2d(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,ndtarg,ntarg1,xyz_in,
      2     ich_id_in,ts_targ_in,eps,dpars,tracval,potslpin)
@@ -122,7 +136,7 @@ c     test just at interior target
       
       call lpcomp_stok_comb_dir_2d(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,ndtarg,ntarg1,xyz_in,
-     2     ich_id,ts_targ,eps,dpars,uval,potdlpin)
+     2     ich_id_in,ts_targ_in,eps,dpars,uval,potdlpin)
 
       call cpu_time(t2)
       tlpcomp = t2-t1
@@ -211,6 +225,50 @@ c           write(*,*) uval(2,i)/pot(2,i), uval(2,i), pot(2,i)
       i1 = 0
       if(err.lt.1.0d-2) i1 = 1
 
+      opdims(1)=2
+      opdims(2)=2
+      ising = 0
+      iquad = 1
+      ifrobust = 0
+      npts2 = 2*npts
+      allocate(slpmat(npts2,npts2),dlpmat(npts2,npts2))
+      
+      call dchunk_matbuild_ggq(nch,norders,ixys,
+     1     iptype,npts,srccoefs,srcvals,adjs,st2d_slp_wrap,ndd,dpars,
+     2     ndz,zpars,ndi,ipars,opdims,ising,iquad,ifrobust,
+     3     slpmat,ier)
+
+      call dchunk_matbuild_ggq(nch,norders,ixys,
+     1     iptype,npts,srccoefs,srcvals,adjs,st2d_dlp_wrap,ndd,dpars,
+     2     ndz,zpars,ndi,ipars,opdims,ising,iquad,ifrobust,
+     3     dlpmat,ier)
+
+      allocate(potdlp2(2,npts),potslp2(2,npts),pot2(2,npts))
+      
+      call test_matvec(npts2,npts2,dlpmat,uval,potdlp2)
+      call test_matvec(npts2,npts2,slpmat,tracval,potslp2)
+
+
+      errl2 = 0
+      rl2 = 0
+      do i=1,npts
+         pot2(1,i) = (potslp2(1,i) + potdlp2(1,i))*2
+         pot2(2,i) = (potslp2(2,i) + potdlp2(2,i))*2
+      enddo
+
+      call test_wl2err(2,npts,wts,uval,pot2,errl2,rell2,relerr)
+
+      call prin2('rel error in greens id, on bdry (ggq)=*',relerr,1)
+
+      call test_wl2err(2,npts,wts,potslp2,potslp,errl2,rell2,relerr)
+
+      call prin2('l2 diff S[trac] (ggq vs fmm)=*',relerr,1)
+      
+      call test_wl2err(2,npts,wts,potdlp2,potdlp,errl2,rell2,relerr)
+
+      call prin2('l2 diff D[u] (ggq vs fmm)=*',relerr,1)
+      
+      
       nsuccess = i1
       ntests = 1
 
@@ -223,7 +281,91 @@ c           write(*,*) uval(2,i)/pot(2,i), uval(2,i), pot(2,i)
       end
 
 
+      subroutine test_l2err(nd,n,xt,x,errl2,rell2,relerr)
+      implicit real *8 (a-h,o-z)
+      real *8 xt(nd,n), x(nd,n)
 
+      errl2 = 0
+      rell2 = 0
+
+      do i = 1,n
+         do j = 1,nd
+            errl2 = errl2 + (xt(j,i)-x(j,i))**2
+            rell2 = rell2 + (xt(j,i))**2
+         enddo
+      enddo
+
+      errl2 = sqrt(errl2)
+      rell2 = sqrt(rell2)
+      relerr = errl2/rell2
+      
+      return
+      end
+
+      subroutine test_wl2err(nd,n,w,xt,x,errl2,rell2,relerr)
+      implicit real *8 (a-h,o-z)
+      real *8 xt(nd,n), x(nd,n), w(n)
+
+      errl2 = 0
+      rell2 = 0
+
+      do i = 1,n
+         do j = 1,nd
+            errl2 = errl2 + (xt(j,i)-x(j,i))**2*w(i)
+            rell2 = rell2 + (xt(j,i))**2*w(i)
+         enddo
+      enddo
+
+      errl2 = sqrt(errl2)
+      rell2 = sqrt(rell2)
+      relerr = errl2/rell2
+      
+      return
+      end
+
+      subroutine st2d_dlp_wrap(x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,
+     1     ipars,f)
+      implicit real *8 (a-h,o-z)
+      real *8 x(8), y(ndtarg), dpars(ndd)
+      complex *16 zpars
+      integer ipars
+      real *8 f(2,2)
+
+      call st2d_dlp_vec(4,x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,
+     1     ipars,f)
+      return
+      end
+
+      subroutine st2d_slp_wrap(x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,
+     1     ipars,f)
+      implicit real *8 (a-h,o-z)
+      real *8 x(8), y(ndtarg), dpars(ndd)
+      complex *16 zpars
+      integer ipars
+      real *8 f(2,2)
+
+      call st2d_slp_vec(4,x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,
+     1     ipars,f)
+      return
+      end
+
+      subroutine test_matvec(m,n,a,x,y)
+      implicit real *8 (a-h,o-z)
+      real *8 a(m,n), x(n), y(m)
+
+      do i = 1,m
+         y(i)=0
+      enddo
+      
+      do j = 1,n
+         xj = x(j)
+         do i = 1,m
+            y(i) = y(i) + a(i,j)*xj
+         enddo
+      enddo
+
+      return
+      end
 c
 c
 c
@@ -499,7 +641,12 @@ c
             ipars(2) = j
             call st2d_comb(srcinfo,2,targinfo,2,dpars,0,zpars,
      1           2,ipars,g1)
+            call st2d_slp(srcinfo,2,targinfo,0,dpars,0,zpars,
+     1           2,ipars,s1)
+            call st2d_dlp(srcinfo,2,targinfo,0,dpars,0,zpars,
+     1           2,ipars,d1)
             if (abs(g1-gmat(i,j)) .gt. 1d-14) ipass=0
+            if (abs(g1-s1*dpars(1)-d1*dpars(2)) .gt. 1d-14) ipass=0
          enddo
       enddo
 

@@ -165,7 +165,7 @@ c
       else if(abs(alpha).lt.1.0d-16.and.abs(beta).ge.1.0d-16) then
          fker=>st2d_dlp
       endif
-      
+
       if(iquadtype.eq.1) then
 
          allocate(wnear1(nquad))
@@ -289,11 +289,11 @@ c
       real *8, intent(in) :: srccoefs(6,npts),srcvals(8,npts),eps
       real *8, intent(in) :: targs(ndtarg,ntarg)
       real *8, intent(in) :: dpars(2)
-      real *8, intent(in) :: sigma(npts)
+      real *8, intent(in) :: sigma(2,npts)
       integer, intent(in) :: ich_id(ntarg)
       real *8, intent(in) :: ts_targ(ntarg)
 
-      real *8, intent(out) :: pot(ntarg)
+      real *8, intent(out) :: pot(2,ntarg)
 
 
       integer nptso,nnz,nquad
@@ -698,7 +698,6 @@ C$OMP$PRIVATE(jstart,pottmp,npols,l)
 C$OMP END PARALLEL DO
 
 c
-      
 C$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(i,j,jpatch,srctmp2)
 C$OMP$PRIVATE(stoklet2,strslet2,strsvec2,nss,l,jstart,ii,vel,npover)
 C$OMP$PRIVATE(velgrad,pre)      
@@ -711,24 +710,12 @@ C$OMP$PRIVATE(velgrad,pre)
             srctmp2(1,nss) = srcover(1,l)
             srctmp2(2,nss) = srcover(2,l)
 
-            if(ifstoklet.eq.1) then
-               stoklet2(1,nss) = stoklet(1,l)
-               stoklet2(2,nss) = stoklet(2,l)
-            else
-               stoklet2(1,nss) = 0
-               stoklet2(2,nss) = 0
-            endif
-            if(ifstrslet.eq.1) then
-               strslet2(1,nss) = strslet(1,l)
-               strslet2(2,nss) = strslet(2,l)
-               strsvec2(1,nss) = strsvec(1,l)
-               strsvec2(2,nss) = strsvec(2,l)
-            else
-               strslet2(1,nss) = 0
-               strslet2(2,nss) = 0
-               strsvec2(1,nss) = 0
-               strsvec2(2,nss) = 0
-            endif
+            stoklet2(1,nss) = stoklet(1,l)
+            stoklet2(2,nss) = stoklet(2,l)
+            strslet2(1,nss) = strslet(1,l)
+            strslet2(2,nss) = strslet(2,l)
+            strsvec2(1,nss) = strsvec(1,l)
+            strsvec2(2,nss) = strsvec(2,l)
           enddo
         enddo
 
@@ -757,8 +744,6 @@ C$OMP END PARALLEL DO
 C$      t2 = omp_get_wtime()     
 
       timeinfo(2) = t2-t1
-
-
 cc      call prin2('quadrature time=*',timeinfo,2)
       
       ttot = timeinfo(1) + timeinfo(2)
@@ -938,7 +923,7 @@ c
      1  ich_id,ts_targ)
 c
 c
-c        this might need fixing
+c     this might need fixing
 c
       iptype_avg = floor(sum(iptype)/(nch+0.0d0))
       norder_avg = floor(sum(norders)/(nch+0.0d0))
