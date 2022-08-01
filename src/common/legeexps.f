@@ -31,6 +31,10 @@ c         said polynomials
 c   legeinmt - for the user-specified n, constructs the matrices of
 c        spectral indefinite integration differentiation on the n
 c        Gaussian nodes on the interval [-1,1].
+c
+c   legeinmt_allnodes: for user-defined n, construct 
+c       interpolation matrices which integrate all legendre polynomails
+c       upto degree n, starting at one of the interior nodes
 c 
 c   legeinte - computes the indefinite integral of the legendre
 c        expansion polin getting the expansion polout
@@ -2410,4 +2414,52 @@ c
 c
         return
         end
- 
+
+
+
+
+        subroutine legeinmt_allnodes(k,xint)
+c
+c    Input arguments:
+c       k: integer
+c         order of legendre polynomials
+c    
+c    Output arguments:
+c      xint: real *8(k,k,k)
+c          xint(i,j,l) is the indefinite integral of
+c             P_{i-1}(t) from t_{l} \to t_{j}
+c
+        implicit real *8 (a-h,o-z)
+        real *8 ts(100),ws(100),umat,vmat,pols(100)
+        integer k
+        real *8 xint(k,k,k)
+        
+        itype = 1
+        call legeexps(itype,k,ts,umat,vmat,ws)
+        do i=1,k
+          do j=1,k
+            do l=1,k
+              xint(l,j,i) = 0 
+            enddo
+          enddo
+        enddo
+        
+        do ipt=1,k
+          tstart = ts(ipt)
+          do inode = 1,k
+            tend = ts(inode)
+            hh = tend-tstart
+            do l=1,k
+              tuse = (tend+tstart)/2 + hh/2*ts(l)
+              call legepols(tuse,k-1,pols)
+              do ipol=1,k
+                xint(ipol,inode,ipt) = xint(ipol,inode,ipt) + 
+     1                       pols(ipol)*ws(l)*hh/2
+              enddo
+            enddo
+          enddo
+        enddo
+
+        
+        return
+        end

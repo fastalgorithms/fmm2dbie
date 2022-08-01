@@ -608,8 +608,112 @@ subroutine chunk_to_lapdlpcoef_lege(k,srcvals,ipt,umat,rdlpcoefs)
   enddo
   alpha = 1.0d0
   beta = 0.0d0
-  call prin2_long('fvals=*',fvals,k)
 
   call dgemv('n',k,k,alpha,umat,k,fvals,1,beta,rdlpcoefs,1)
   return
 end subroutine chunk_to_lapdlpcoef_lege
+!
+!
+!
+!
+!
+subroutine chunk_to_lapspcoef_lege(k,srcvals,ipt,umat,rspcoefs)
+  implicit none
+  integer ipt,k
+  real *8 srcvals(8,k),rspcoefs(k),umat(k,k),fvals(k)
+  real *8 x,y,rnx,rny,rself,r2,dx,d2x,dy,d2y,alpha,beta,ds
+  integer i,j
+
+  dx = srcvals(3,ipt)
+  dy = srcvals(4,ipt)
+  d2x = srcvals(5,ipt)
+  d2y = srcvals(6,ipt)
+  ds = sqrt(dx**2 + dy**2)
+  rnx = srcvals(7,ipt)
+  rny = srcvals(8,ipt)
+
+  do i=1,k
+    x = srcvals(1,ipt)-srcvals(1,i)
+    y = srcvals(2,ipt)-srcvals(2,i)
+    r2 = x**2 + y**2
+    
+    if(i.ne.ipt) then
+       fvals(i) = (x*rnx + y*rny)/r2
+    else
+      fvals(i) = (dx*d2y-dy*d2x)/2/ds**3 
+    endif
+  enddo
+  alpha = 1.0d0
+  beta = 0.0d0
+
+  call dgemv('n',k,k,alpha,umat,k,fvals,1,beta,rspcoefs,1)
+  return
+end subroutine chunk_to_lapspcoef_lege
+
+
+
+subroutine chunk_to_ldlp_sp_xint(k,ts,srcvals,umat,xint, &
+    rdlpcoefs,rspcoefs)
+  implicit real *8 (a-h,o-z)
+  integer k
+  real *8 srcvals(8,k),xint(k,k,k),rdlpcoefs(k,k),rspcoefs(k,k)
+  real *8 ts(k),umat(k,k)
+  real *8, allocatable :: srcvals_new(:,:),dxc(:),d2xc(:),dyc(:)
+  real *8, allocatable :: d2yc(:)
+
+
+  allocate(srcvals_new(8,k),dxc(k),d2xc(k),dyc(k),d2yc(k))
+  alpha = 1.0d0
+  beta = 0.0d0
+  do ipt=1,k
+    do i=1,k
+      srcvals_new(5,i) = srcvals(5,i)*srcvals(7,ipt) + & 
+          srcvals(6,i)*srcvals(8,ipt)
+      srcvals_new(6,i) = -srcvals(5,i)*srcvals(8,ipt) + &
+          srcvals(6,i)*srcvals(7,ipt)
+    enddo
+      
+    call dgemv('n',k,k,alpha,umat,k,srcvals_new(5,1:k),1,beta,d2xc,1)
+
+    call dgemv('n',k,k,alpha,umat,k,srcvals_new(6,1:k),1,beta,d2yc,1)
+      
+    srcvals_new(1:4,1:k) = 0
+    do inode=1,k
+      do l=1,k
+        srcvals_new(3,inode) = srcvals_new(3,inode) + & 
+           xint(l,inode,ipt)*d2xc(l)
+        srcvals_new(4,inode) = srcvals_new(4,inode) + &
+           xint(l,inode,ipt)*d2yc(l)
+      enddo
+    enddo
+
+    call dgemv('n',k,k,alpha,umat,k,srcvals_new(3,1:k),1,beta,dxc,1)
+
+    call dgemv('n',k,k,alpha,umat,k,srcvals_new(4,1:k),1,beta,dyc,1)
+      
+    do inode=1,k
+      do l=1,k
+        srcvals_new(1,inode) = srcvals_new(1,inode) + &
+           xint(l,inode,ipt)*dxc(l)
+        srcvals_new(2,inode) = srcvals_new(2,inode) + &
+           xint(l,inode,ipt)*dyc(l)  
+      enddo
+    enddo
+
+    do inode=1,k
+      srcvals_new(4,inode) = srcvals_new(4,inode)+ &
+         sqrt(srcvals(3,ipt)**2 + srcvals(4,ipt)**2)
+      srcvals_new(2,inode) = srcvals_new(2,inode) + &
+        sqrt(srcvals(3,ipt)**2 + srcvals(4,ipt)**2)*(ts(inode)-ts(ipt))
+      ds = sqrt(srcvals_new(3,inode)**2 + srcvals_new(4,inode)**2)
+      srcvals_new(7,inode) = srcvals_new(4,inode)/ds
+      srcvals_new(8,inode) = -srcvals_new(3,inode)/ds
+    enddo
+    call chunk_to_lapdlpcoef_lege(k,srcvals_new, &
+       ipt,umat,rdlpcoefs(1,ipt))
+    call chunk_to_lapspcoef_lege(k,srcvals_new, &
+       ipt,umat,rspcoefs(1,ipt))
+  enddo
+
+  return
+end subroutine

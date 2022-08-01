@@ -1,10 +1,13 @@
       implicit real *8 (a-h,o-z)
       real *8, allocatable :: srcvals(:,:),rdlpcoefs(:),pols(:)
+      real *8, allocatable :: rspcoefs(:)
       real *8, allocatable :: ts(:),wts(:),umat(:,:),vmat(:,:)
       real *8, allocatable :: xnew(:),ynew(:),dxdtnew(:),dydtnew(:)
       real *8, allocatable :: srcvals_new(:,:)
       real *8, allocatable :: xmat(:,:),rhs(:,:),soln(:,:)
       real *8, allocatable :: xint(:,:),d2xc(:),d2yc(:),dxc(:),dyc(:)
+      real *8, allocatable :: xintnew(:,:,:)
+      real *8, allocatable :: rdlpcoefs_all(:,:),rspcoefs_all(:,:)
       
       call prini(6,13)
       done = 1.0d0
@@ -19,7 +22,7 @@
 
       h = 0.0000001d0
       tstart = pi/8
-      allocate(srcvals(8,k),rdlpcoefs(k),pols(k))
+      allocate(srcvals(8,k),rdlpcoefs(k),pols(k),rspcoefs(k))
       allocate(srcvals_new(8,k))
       tend = tstart + h
       do i=1,k
@@ -158,7 +161,8 @@ c
       call prin2_long('rfac=*',rfac,1)
       print *, "err5=",abs(rfac+0.5d0)*h
 
-      allocate(xint(k,k))
+      allocate(xint(k,k),xintnew(k,k,k))
+      call legeinmt_allnodes(k,xintnew)
       xint = 0
 
       do inode=1,k
@@ -195,9 +199,9 @@ c
       do inode=1,k
         do l=1,k
           srcvals_new(3,inode) = srcvals_new(3,inode) + 
-     1       xint(l,inode)*d2xc(l)
+     1       xintnew(l,inode,ipt)*d2xc(l)
           srcvals_new(4,inode) = srcvals_new(4,inode) + 
-     1       xint(l,inode)*d2yc(l)
+     1       xintnew(l,inode,ipt)*d2yc(l)
         enddo
       enddo
 
@@ -211,9 +215,9 @@ c
       do inode=1,k
         do l=1,k
           srcvals_new(1,inode) = srcvals_new(1,inode) + 
-     1       xint(l,inode)*dxc(l)
+     1       xintnew(l,inode,ipt)*dxc(l)
           srcvals_new(2,inode) = srcvals_new(2,inode) + 
-     1       xint(l,inode)*dyc(l)  
+     1       xintnew(l,inode,ipt)*dyc(l)  
         enddo
       enddo
 
@@ -223,6 +227,9 @@ c
         srcvals_new(2,inode) = srcvals_new(2,inode) + 
      1     sqrt(srcvals(3,ipt)**2 + srcvals(4,ipt)**2)*
      2      (ts(inode)-ts(ipt))
+        ds = sqrt(srcvals_new(3,inode)**2 + srcvals_new(4,inode)**2)
+        srcvals_new(7,inode) = srcvals_new(4,inode)/ds
+        srcvals_new(8,inode) = - srcvals_new(3,inode)/ds
       enddo
       call chunk_to_lapdlpcoef_lege(k,srcvals_new,ipt,umat,rdlpcoefs)
       call prin2_long('rdlpcoefs=*',rdlpcoefs,k)
@@ -233,7 +240,35 @@ c
       print *, "h=",h
       print *, "err7=",abs(rr+0.5d0)*h
 
+      call chunk_to_lapspcoef_lege(k,srcvals_new,ipt,umat,rspcoefs)
+      call prin2_long('rspcoefs=*',rspcoefs,k)
+      rr = 0
+      do i=1,k
+        rr = rr + rspcoefs(i)*pols(i)
+      enddo
+      print *, "h=",h
+      print *, "err8=",abs(rr-0.5d0)*h
+
+
+      allocate(rdlpcoefs_all(k,k),rspcoefs_all(k,k))
+      call chunk_to_ldlp_sp_xint(k,ts,srcvals,umat,xintnew,
+     1   rdlpcoefs_all,rspcoefs_all)
+      rr = 0
+      do i=1,k
+        rr = rr + rdlpcoefs_all(i,ipt)*pols(i)
+      enddo
+      print *, "h=",h
+      print *, "err9=",abs(rr+0.5d0)
+
+      rr = 0
+      do i=1,k
+        rr = rr + rspcoefs_all(i,ipt)*pols(i)
+      enddo
+      print *, "h=",h
+      print *, "err10=",abs(rr-0.5d0)
 
 
       stop
       end
+
+
