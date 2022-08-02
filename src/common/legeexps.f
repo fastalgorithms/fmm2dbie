@@ -2418,7 +2418,7 @@ c
 
 
 
-        subroutine legeinmt_allnodes(k,xint)
+        subroutine legeinmt_allnodes(k,kg,xint)
 c
 c    Input arguments:
 c       k: integer
@@ -2431,12 +2431,15 @@ c             P_{i-1}(t) from t_{l} \to t_{j}
 c
         implicit real *8 (a-h,o-z)
         real *8 ts(100),ws(100),umat,vmat,pols(100)
+        real *8 tsg(100),wsg(100)
         integer k
-        real *8 xint(k,k,k)
+        real *8 xint(k,k,kg)
         
         itype = 1
         call legeexps(itype,k,ts,umat,vmat,ws)
-        do i=1,k
+        itype = 1
+        call legeexps(itype,kg,tsg,umat,vmat,wsg)
+        do i=1,kg
           do j=1,k
             do l=1,k
               xint(l,j,i) = 0 
@@ -2444,8 +2447,8 @@ c
           enddo
         enddo
         
-        do ipt=1,k
-          tstart = ts(ipt)
+        do ipt=1,kg
+          tstart = tsg(ipt)
           do inode = 1,k
             tend = ts(inode)
             hh = tend-tstart

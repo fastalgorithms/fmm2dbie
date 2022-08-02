@@ -20,7 +20,8 @@
       itype = 2
       call legeexps(itype,k,ts,umat,vmat,wts)
 
-      h = 0.0000001d0
+      h = 1.0d-1
+      h = 2.0d-1
       tstart = pi/8
       allocate(srcvals(8,k),rdlpcoefs(k),pols(k),rspcoefs(k))
       allocate(srcvals_new(8,k))
@@ -54,8 +55,9 @@
       print *, "dd=",dd
       print *, "ipt=",ipt
 
-      call chunk_to_lapdlpcoef_lege(k,srcvals,ipt,umat,rdlpcoefs)
-      call prin2('rdlpcoefs=*',rdlpcoefs,k)
+      call chunk_to_lapdlpcoef_lege(k,srcvals,srcvals(1,ipt),
+     1   ipt,umat,rdlpcoefs)
+cc      call prin2('rdlpcoefs=*',rdlpcoefs,k)
       print *, "tloc=",tloc
       call legepols(tloc,k-1,pols)
       rr = 0
@@ -63,8 +65,8 @@
         rr = rr + rdlpcoefs(i)*pols(i)
       enddo
       call prin2_long('rr=*',rr,1)
-      print *, "err1=",abs(dd+0.5d0)*h
-      print *, "err2=",abs(rr+0.5d0)*h
+      print *, "err1=",abs(dd+0.5d0)
+      print *, "err2=",abs(rr+0.5d0)
 
 c
 c
@@ -93,13 +95,14 @@ c
         srcvals_new(7,i) = dydtnew(i)/ds
         srcvals_new(8,i) = -dxdtnew(i)/ds
       enddo
-      call chunk_to_lapdlpcoef_lege(k,srcvals_new,ipt,umat,rdlpcoefs)
-      call prin2_long('rdlpcoefs=*',rdlpcoefs,k)
+      call chunk_to_lapdlpcoef_lege(k,srcvals_new,srcvals_new(1,ipt),
+     1   ipt,umat,rdlpcoefs)
+cc      call prin2_long('rdlpcoefs=*',rdlpcoefs,k)
       rr = 0
       do i=1,k
         rr = rr + rdlpcoefs(i)*pols(i)
       enddo
-      print *, "err3=",abs(rr+0.5d0)*h
+      print *, "err3=",abs(rr+0.5d0)
 
       allocate(xmat(k,k-2),rhs(k,2),soln(k-2,2))
       do i=1,k
@@ -120,7 +123,7 @@ c
       eps = 1.0d-14
       call dleastsq(k,k-2,xmat,2,rhs,eps,info,soln,irank)
       call prinf('irank=*',irank,1)
-      call prin2('soln=*',soln,2*(k-2))
+cc      call prin2('soln=*',soln,2*(k-2))
       
       
       call legepols(tloc,k-1,pols)
@@ -132,8 +135,8 @@ c
         rden = rden + soln(i,2)*pols(i)
       enddo
       rfac = rnum/rden
-      call prin2_long('rfac=*',rfac,1)
-      print *, "err4=",abs(rfac+0.5d0)*h
+cc      call prin2_long('rfac=*',rfac,1)
+      print *, "err4=",abs(rfac+0.5d0)
 
       do i=1,k
         rhs(i,1)=(srcvals_new(1,ipt)-srcvals_new(1,i))*srcvals_new(7,i)+
@@ -146,7 +149,7 @@ c
       eps = 1.0d-14
       call dleastsq(k,k-2,xmat,2,rhs,eps,info,soln,irank)
       call prinf('irank=*',irank,1)
-      call prin2('soln=*',soln,2*(k-2))
+cc      call prin2('soln=*',soln,2*(k-2))
       
       
       call legepols(tloc,k-1,pols)
@@ -158,11 +161,11 @@ c
         rden = rden + soln(i,2)*pols(i)
       enddo
       rfac = rnum/rden
-      call prin2_long('rfac=*',rfac,1)
-      print *, "err5=",abs(rfac+0.5d0)*h
+cc      call prin2_long('rfac=*',rfac,1)
+      print *, "err5=",abs(rfac+0.5d0)
 
       allocate(xint(k,k),xintnew(k,k,k))
-      call legeinmt_allnodes(k,xintnew)
+      call legeinmt_allnodes(k,k,xintnew)
       xint = 0
 
       do inode=1,k
@@ -231,27 +234,29 @@ c
         srcvals_new(7,inode) = srcvals_new(4,inode)/ds
         srcvals_new(8,inode) = - srcvals_new(3,inode)/ds
       enddo
-      call chunk_to_lapdlpcoef_lege(k,srcvals_new,ipt,umat,rdlpcoefs)
-      call prin2_long('rdlpcoefs=*',rdlpcoefs,k)
+      call chunk_to_lapdlpcoef_lege(k,srcvals_new,srcvals_new(1,ipt),
+     1    ipt,umat,rdlpcoefs)
+cc      call prin2_long('rdlpcoefs=*',rdlpcoefs,k)
       rr = 0
       do i=1,k
         rr = rr + rdlpcoefs(i)*pols(i)
       enddo
       print *, "h=",h
-      print *, "err7=",abs(rr+0.5d0)*h
+      print *, "err7=",abs(rr+0.5d0)
 
-      call chunk_to_lapspcoef_lege(k,srcvals_new,ipt,umat,rspcoefs)
-      call prin2_long('rspcoefs=*',rspcoefs,k)
+      call chunk_to_lapspcoef_lege(k,srcvals_new,srcvals_new(1,ipt),
+     1  ipt,umat,rspcoefs)
+cc      call prin2_long('rspcoefs=*',rspcoefs,k)
       rr = 0
       do i=1,k
         rr = rr + rspcoefs(i)*pols(i)
       enddo
       print *, "h=",h
-      print *, "err8=",abs(rr-0.5d0)*h
+      print *, "err8=",abs(rr-0.5d0)
 
 
       allocate(rdlpcoefs_all(k,k),rspcoefs_all(k,k))
-      call chunk_to_ldlp_sp_xint(k,ts,srcvals,umat,xintnew,
+      call chunk_to_ldlp_sp_xint(k,k,ts,ts,srcvals,srcvals,umat,xintnew,
      1   rdlpcoefs_all,rspcoefs_all)
       rr = 0
       do i=1,k
@@ -266,6 +271,64 @@ c
       enddo
       print *, "h=",h
       print *, "err10=",abs(rr-0.5d0)
+c
+c  Now test ellipse
+c
+c
+      srcvals(1:8,1:k) = 0
+      a = 1.0d0
+      b = 1.2d0
+      do i=1,k
+        tuse = tstart + (ts(i)+1)/2*h
+        srcvals(1,i) = a*cos(tuse)
+        srcvals(2,i) = b*sin(tuse)
+        srcvals(3,i) = -a*sin(tuse)*h/2
+        srcvals(4,i) = b*cos(tuse)*h/2
+        srcvals(5,i) = -a*cos(tuse)*h*h/2/2
+        srcvals(6,i) = -b*sin(tuse)*h*h/2/2
+        ds = sqrt(srcvals(3,i)**2 + srcvals(4,i)**2)
+        srcvals(7,i) = srcvals(4,i)/ds 
+        srcvals(8,i) = -srcvals(3,i)/ds
+      enddo
+      call prin2('srcvals=*',srcvals,8*k)
+      tpt = tstart+(ts(ipt+3)+1)/2*h
+      tloc = ts(ipt+3)
+      x = srcvals(1,ipt)-a*cos(tpt)
+      y = srcvals(2,ipt)-b*sin(tpt)
+      print *, "tpt=",tpt
+      print *, "tloc=",tloc
+      call prin2('ts=*',ts,k)
+      dx = -a*sin(tpt)
+      dy = b*cos(tpt)
+      ds = sqrt(dx**2 + dy**2)
+      rnx = dy/ds 
+      rny = -dx/ds
+      r2 = x**2 + y**2
+      
+      dd = (x*rnx + y*rny)/r2
+      print *, "ipt=",ipt
+      rdlpcoefs = 0
+      call legepols(tloc,k-1,pols)
+      call chunk_to_lapdlpcoef_lege(k,srcvals,srcvals(1,ipt),ipt,
+     1   umat,rdlpcoefs)
+
+      rr = 0
+      do i=1,k
+        rr = rr + rdlpcoefs(i)*pols(i)
+      enddo
+      rr1 = rr
+
+
+      call chunk_to_ldlp_sp_xint(k,k,ts,ts,srcvals,srcvals,umat,xintnew,
+     1   rdlpcoefs_all,rspcoefs_all)
+      rr = 0
+      do i=1,k
+        rr = rr + rdlpcoefs_all(i,ipt)*pols(i)
+      enddo
+      print *, rr1,rr,dd
+      print *, "err11=",abs(rr-dd)
+      
+
 
 
       stop
