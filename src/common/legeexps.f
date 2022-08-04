@@ -2281,13 +2281,15 @@ c
 c
         pol3=pol
         der3=der
+        
         do 2000 kk=1,n2
 c
         if( (ifodd .eq. 1) .and. (kk .eq. 1) ) then
             ts(kk)=x0
             if(itype .gt. 0) whts(kk)=der
             x0=x1
-            x1=ts(kk+1)
+
+            if(n2.gt.1) x1=ts(kk+1)
             pol3=pol
             der3=der
             goto 2000
