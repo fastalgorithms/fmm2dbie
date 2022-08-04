@@ -155,7 +155,6 @@ c     find chunks sufficiently close to each target
 
       call cpu_time(t1)
 c$    t1 = omp_get_wtime()       
-      ndt = 2
       call findnear2dmem(xys,nch,rads,ndt,targets,nt,nnz)
       
       allocate(row_ptr(nt+1),col_ind(nnz),stat=ier1)
