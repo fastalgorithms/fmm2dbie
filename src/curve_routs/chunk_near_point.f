@@ -150,12 +150,11 @@ c     find chunks sufficiently close to each target
             ii = ii+1
             radmax = max(radmax,srcrad(ii))
          enddo
-         rads(i) = rads1(i) + radmax*1.2d0
+         rads(i) = (rads1(i) + radmax*1.2d0)*1.5d0
       enddo
 
       call cpu_time(t1)
 c$    t1 = omp_get_wtime()       
-      ndt = 2
       call findnear2dmem(xys,nch,rads,ndt,targets,nt,nnz)
       
       allocate(row_ptr(nt+1),col_ind(nnz),stat=ier1)

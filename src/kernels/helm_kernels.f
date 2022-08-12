@@ -94,6 +94,7 @@ c
 
       ztmp = -zs*zk*h1*rinv
 
+
       gx = (srcinfo(1)-targinfo(1))*srcinfo(7)
       gy = (srcinfo(2)-targinfo(2))*srcinfo(8)
 
@@ -125,10 +126,10 @@ c
 
       ztmp = -zs*zk*h1*rinv
 
-      gx = ztmp*(srcinfo(1)-targinfo(1))
-      gy = ztmp*(srcinfo(2)-targinfo(2))
+      gx = (srcinfo(1)-targinfo(1))
+      gy = (srcinfo(2)-targinfo(2))
       
-      u = zpars(3)*(gx*srcinfo(7) + gy*srcinfo(8)) + zpars(2)*zs*h0
+      u = zpars(3)*(gx*srcinfo(7) + gy*srcinfo(8))*ztmp + zpars(2)*zs*h0
 
 
       return
