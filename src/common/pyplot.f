@@ -1319,11 +1319,16 @@ c
  	    elseif(icmp .eq. 5) then
            write(iun87,'(a,f5.2,a,f5.2,a,f5.2,a,f5.2,a)')
      1      'pt.imshow(x, extent=[',x1,',',x2,',',y1,',',y2,
-     2      '],cmap = cmaps.parula)'
+     2              '],cmap = cmaps.parula)'
+	    elseif (icmp .eq. 6) then
+           write(iun87,'(a,e25.19,a,e25.19,a,e25.19,a,e25.19,a)')
+     1      'pt.imshow(x, extent=[',x1,',',x2,',',y1,',',y2,
+     2      '],cmap = "jet")'
+           
 	    endif
         write(iun87,'(a)') 'cb=pt.colorbar(shrink=.9)'
         write(iun87,'(a,a,a)') 'y = np.loadtxt("',file9,'")'
-        write(iun87,'(a)') 'pt.plot(y[:,0],y[:,1],"w.")'
+        write(iun87,'(a)') 'pt.plot(y[:,0],y[:,1],"w-")'
         write(iun87,'(a,a,a)') 'pt.savefig("',file8p,'")'
 
 c
@@ -1344,6 +1349,159 @@ c
         do 2600 i=1,npts
         write(iun89,*) x(i), y(i)
  2600 continue
+c
+        return
+        end
+c
+c
+      subroutine pyimage7(iw,m,n,vals,x,y,npts,xo,yo,nptso,
+     1     x1,x2,y1,y2,icmp)
+        implicit real *8 (a-h,o-z)
+        real *8 vals(m,n),target(2,m,n),x(1),y(1),xo(*),yo(*)
+        character *1 a1,a10,file1(11),file11(9),
+     1      temp(32),file2(11),file1p(10),file3(11)
+        character *9 file4
+        character *11 file8,file9,file10
+        character *10 file8p
+        character *32 title2
+c
+        equivalence (file1,file8), (file11,file4), (temp,title2)
+        equivalence (file2,file9), (file1p,file8p), (file3,file10)
+c
+c       output the data stored in vals to a file which python can
+c       read and plot as a heat map using matplotlib - this routine
+c       also plots the scatterer, contains in x,y, as points 
+c
+c       this routine requires a very special formatting of the inputs
+c       target and vals - vals(1,1) is the value in the upper left
+c       hand corner of the plot, vals(m,1) is the value in the lower
+c       left hand corner, vals(1,n) is the value in the upper right
+c       hand corner, and vals(m,n) is the value in the lower right 
+c       hand corner.
+c
+c       input:
+c
+c         iw - file number, same as in quaplot
+c         m - number of y values on the grid
+c         n - number of x values on the grid
+c         vals - 'z' value at the x,y grid points
+c         x,y - points on the scatterer
+c         npts - length of x and y
+c         title - the title of the plot, should be of the form 'title*',
+c             and can only be a maximum of 32 characters long
+c
+c       note that on exit, two files will be created - plotiw.py 
+c       and plotiw.dat
+c
+c
+c       first construct the file names using iw
+c
+        i1=mod(iw,10)
+        i10=(iw-i1)/10
+        call int2char2(i1,a1)
+        call int2char2(i10,a10)
+
+        file8='plotiw.dat1'
+        file1(5)=a10
+        file1(6)=a1
+c
+        file8p='plotiw.pdf'
+        file1p(5)=a10
+        file1p(6)=a1
+c
+        file9='plotiw.dat2'
+        file2(5)=a10
+        file2(6)=a1
+c
+        file10='plotiw.dat3'
+        file3(5)=a10
+        file3(6)=a1
+c
+        file4='plotiw.py'
+        file11(5)=a10
+        file11(6)=a1
+c
+c       print out the contents of the scripting file, gniw
+c
+        iun87=877
+        open(unit=iun87,file=file4)
+c
+        call quamesslen3(title,nchar)
+c
+
+c
+        write(iun87,'(a)') '#!/usr/bin/python'
+        write(iun87,'(a)') 'import matplotlib.pyplot as pt'
+        write(iun87,'(a)') 'import numpy as np'
+        write(iun87,'(a)') 'import colormap as cmaps'
+        write(iun87,'(a)') ''
+        write(iun87,'(a)') 'pt.rc("font", size=16)'
+        write(iun87,'(a,a,a)') 'x = np.loadtxt("',file8,'")'
+        write(iun87,'(a,i5,a,i5,a)') 
+     1      'x = x.reshape(', m, ',', n, ', order="F")'
+
+	    if (icmp .eq. 1) then
+           write(iun87,'(a,e25.19,a,e25.19,a,e25.19,a,e25.19,a)')
+     1      'pt.imshow(x, extent=[',x1,',',x2,',',y1,',',y2,
+     2      '],cmap = "hot")'
+
+	    elseif(icmp .eq. 2) then
+           write(iun87,'(a,f5.2,a,f5.2,a,f5.2,a,f5.2,a)')
+     1      'pt.imshow(x, extent=[',x1,',',x2,',',y1,',',y2,
+     2      '],cmap = cmaps.inferno)'
+
+	    elseif(icmp .eq. 3) then
+           write(iun87,'(a,f5.2,a,f5.2,a,f5.2,a,f5.2,a)')
+     1      'pt.imshow(x, extent=[',x1,',',x2,',',y1,',',y2,
+     2      '],cmap = cmaps.plasma)'
+
+	    elseif(icmp .eq. 4) then
+           write(iun87,'(a,f5.2,a,f5.2,a,f5.2,a,f5.2,a)')
+     1      'pt.imshow(x, extent=[',x1,',',x2,',',y1,',',y2,
+     2      '],cmap = cmaps.viridis)'
+
+ 	    elseif(icmp .eq. 5) then
+           write(iun87,'(a,f5.2,a,f5.2,a,f5.2,a,f5.2,a)')
+     1      'pt.imshow(x, extent=[',x1,',',x2,',',y1,',',y2,
+     2              '],cmap = cmaps.parula)'
+	    elseif (icmp .eq. 6) then
+           write(iun87,'(a,e25.19,a,e25.19,a,e25.19,a,e25.19,a)')
+     1      'pt.imshow(x, extent=[',x1,',',x2,',',y1,',',y2,
+     2      '],cmap = "jet")'
+           
+	    endif
+        write(iun87,'(a)') 'cb=pt.colorbar(shrink=.9)'
+        write(iun87,'(a,a,a)') 'y = np.loadtxt("',file9,'")'
+        write(iun87,'(a)') 'pt.plot(y[:,0],y[:,1],"w-")'
+        write(iun87,'(a,a,a)') 'y = np.loadtxt("',file10,'")'
+        write(iun87,'(a)') 'pt.plot(y[:,0],y[:,1],"k-")'
+        write(iun87,'(a,a,a)') 'pt.savefig("',file8p,'")'
+
+c
+c       now print out the data file, plotiw.dat1 and plotiw.dat2
+c
+        iun88=888
+        open(unit=iun88,file=file8)
+        do 1600 j=1,n
+        do 1400 i=1,m
+        write(iun88,*) vals(i,j)
+ 1400 continue
+ 1600 continue
+c
+cc        call prinf('inside pyimage2, npts = *', npts, 1)
+c
+        iun89=889
+        open(unit=iun89,file=file9)
+        do 2600 i=1,npts
+        write(iun89,*) x(i), y(i)
+ 2600 continue
+c
+c
+        iun90=890
+        open(unit=iun89,file=file10)
+        do i=1,nptso
+           write(iun89,*) xo(i), yo(i)
+        enddo
 c
         return
         end

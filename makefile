@@ -92,6 +92,7 @@ COMOBJS = $(COM)/hkrand.o \
 	$(COM)/sort.o \
 	$(COM)/sparse_reps.o $(COM)/rotmat_gmres.o \
 	$(COM)/get_fmm2d_thresh.o $(COM)/lege_extras.o \
+	$(COM)/findinrectangle.o $(COM)/pnpoly.o
 
 # Surface wrappers
 SURF = src/curve_routs
