@@ -11,16 +11,16 @@
       integer, allocatable :: iquad(:)
       real *8, allocatable :: srcover(:,:),wover(:)
       real *8, allocatable :: uval(:),dudnval(:)
-      real *8, allocatable :: sigmaover(:),slp_near(:),dlp_near(:)
+      real *8, allocatable :: slp_near(:),dlp_near(:)
       real *8, allocatable :: pot(:),potslp(:),potdlp(:)
       real *8, allocatable :: potslp2(:)
 
       integer, allocatable :: norders(:),ixys(:),iptype(:)
-      integer, allocatable :: ixyso(:),nfars(:)
+      integer, allocatable :: ixyso(:),novers(:)
 
       integer, allocatable :: ich_id(:),inode_id(:)
       real *8, allocatable :: ts_targ(:)
-      real *8, allocatable :: ab(:,:)
+      real *8, allocatable :: ab(:,:), rects(:,:,:)
       real *8 xyz_out(2),xyz_in(2)
       real *8, allocatable :: sigma(:)
       real *8 dparsgeo(2), dpars(2)
@@ -82,7 +82,6 @@
       xyz_in(2) = 0.23d0
 
       allocate(targs(2,npts))
-      allocate(ixyso(nch+1),nfars(nch))
       allocate(wts(npts))
       call get_qwts2d(nch,norders,ixys,iptype,npts,srcvals,wts)
 
@@ -117,31 +116,43 @@
 
       call get_chunk_id_ts(nch,norders,ixys,iptype,npts, 
      1         ich_id,ts_targ)
-
  
 c
 c    find near field
 c
-      iptype = 1
-      call get_rfac2d(norders(1),iptype,rfac)
-      do i=1,nch 
-        rad_near(i) = rads(i)*rfac
-      enddo
 
-      call findnear2dmem(cms,nch,rad_near,ndtarg,targs,npts,nnz)
+      rho = 2d0
+      npolyfac=2
+
+      allocate(novers(nch),ixyso(nch+1))
+      
+      call ellipse_nearfield2d_getnovers(eps,rho,npolyfac,
+     1     nch,norders,ising,novers,ier)
+
+      ixyso(1)=1
+      do i = 1,nch
+         ixyso(i+1)=ixyso(i)+novers(i)
+      enddo
+      npts_over=ixyso(nch+1)-1
+
+      allocate(rects(2,4,nch))
+      call ellipse_nearfield2d_definerects(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,rho,rects)
+
+      call findinrectangle_mem(nch,rects,npts,ndtarg,targs,nnz,
+     1     ier)
 
       allocate(row_ptr(npts+1),col_ind(nnz))
-      
-      call findnear2d(cms,nch,rad_near,ndtarg,targs,npts,row_ptr, 
-     1        col_ind)
+
+      call findinrectangle(nch,rects,npts,ndtarg,targs,row_ptr,
+     1     nnz,col_ind,ier)
 
       allocate(iquad(nnz+1)) 
       call get_iquad_rsc2d(nch,ixys,npts,nnz,row_ptr,col_ind,
-     1         iquad)
+     1     iquad)
 
       nquad = iquad(nnz+1)-1
       allocate(slp_near(nquad),dlp_near(nquad))
-
 
 
       ndtarg = 2
@@ -151,29 +162,16 @@ c
       ikerorder = -1
 
 
-      call cpu_time(t1)
-      do i=1,nch
-         nfars(i) = norders(i)
-         ixyso(i) = ixys(i)
-      enddo
-      ixyso(nch+1) = ixys(nch+1)
-      call cpu_time(t2)
-      tfar = t2-t1
-
-
       npts_over = ixyso(nch+1)-1
 
-
-
-      allocate(srcover(8,npts_over),sigmaover(npts_over),
-     1         wover(npts_over))
+      allocate(srcover(8,npts_over),wover(npts_over))
 
           
       call oversample_geom2d(nch,norders,ixys,iptype,npts, 
-     1   srccoefs,srcvals,nfars,ixyso,npts_over,srcover)
-
-      call get_qwts2d(nch,nfars,ixyso,iptype,npts_over,
-     1        srcover,wover)
+     1     srccoefs,srcvals,novers,ixyso,npts_over,srcover)
+      
+      call get_qwts2d(nch,novers,ixyso,iptype,npts_over,
+     1     srcover,wover)
 
 
       do i=1,nquad
@@ -190,25 +188,32 @@ c
 
       iquadtype = 1
 
-cc      goto 1111
-
-      call getnearquad_lap_comb_dir_2d(nch,norders,
-     1     ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
-     1     ich_id,ts_targ,eps,dpars,iquadtype,nnz,row_ptr,col_ind,
-     1     iquad,nquad,slp_near)
+      call getoncurvequad_lap_comb_dir_2d(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,adjs,
+     2     eps,dpars,iquadtype,nnz,row_ptr,col_ind,
+     3     iquad,nquad,slp_near)
+      
+c      call getnearquad_lap_comb_dir_2d(nch,norders,
+c     1     ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
+c     1     ich_id,ts_targ,eps,dpars,iquadtype,nnz,row_ptr,col_ind,
+c     1     iquad,nquad,slp_near)
 
       dpars(1) = 0.0d0
       dpars(2) = 1.0d0
-      call getnearquad_lap_comb_dir_2d(nch,norders,
-     1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
-     1      ich_id,ts_targ,eps,dpars,iquadtype,
-     1      nnz,row_ptr,col_ind,iquad,nquad,dlp_near)
+
+      call getoncurvequad_lap_comb_dir_2d(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,adjs,
+     2     eps,dpars,iquadtype,nnz,row_ptr,col_ind,
+     3     iquad,nquad,dlp_near)
+      
+c      call getnearquad_lap_comb_dir_2d(nch,norders,
+c     1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
+c     1      ich_id,ts_targ,eps,dpars,iquadtype,
+c     1      nnz,row_ptr,col_ind,iquad,nquad,dlp_near)
       
       call cpu_time(t2)
       tquadgen = t2-t1
-
- 1111 continue
-
+      
       ifinout = 0     
 
       dpars(1) = 1.0d0
@@ -218,9 +223,9 @@ cc      goto 1111
       call cpu_time(t1)
 
       call lpcomp_lap_comb_dir_addsub_2d(nch,norders,ixys,
-     1  iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
-     2  eps,dpars,nnz,row_ptr,col_ind,iquad,nquad,slp_near,
-     3  dudnval,nfars,npts_over,ixyso,srcover,wover,potslp)
+     1     iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
+     2     eps,dpars,nnz,row_ptr,col_ind,iquad,nquad,slp_near,
+     3     dudnval,novers,npts_over,ixyso,srcover,wover,potslp)
 
 
       dpars(1) = 0.0d0
@@ -230,7 +235,7 @@ cc      goto 1111
       call lpcomp_lap_comb_dir_addsub_2d(nch,norders,ixys,
      1  iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
      2  eps,dpars,nnz,row_ptr,col_ind,iquad,nquad,dlp_near,
-     3  uval,nfars,npts_over,ixyso,srcover,wover,potdlp)
+     3  uval,novers,npts_over,ixyso,srcover,wover,potdlp)
 
 
       call cpu_time(t2)
@@ -297,7 +302,7 @@ c     1          potdlp(i),uval(i)
      1  ' out of ',ntests,' in lap_wrappers testing suite'
       close(33)
 c
-      return      
+      stop
       end
 
 

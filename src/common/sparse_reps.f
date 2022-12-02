@@ -53,7 +53,7 @@ c-------------------------------------------------
 C$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(i,j)
       do i=1,nrow
         do j=row_ptr(i),row_ptr(i+1)-1
-          row_ind_exp(j) = i
+           row_ind_exp(j) = i
         enddo
       enddo
 C$OMP END PARALLEL DO     

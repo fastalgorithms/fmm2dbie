@@ -7,11 +7,11 @@ c
       real *8 ts(2)
       character *100 fname
       integer ipars(2)
-      complex *16, allocatable :: ubdry(:), uin(:)
-      complex *16, allocatable :: potbdry(:), potin(:)
-      complex *16, allocatable :: sysmat(:,:)
+      real *8, allocatable :: ubdry(:,:), uin(:,:), qwts(:)
+      real *8, allocatable :: potbdry(:,:), potin(:,:), potin2(:,:)
+      real *8, allocatable :: sysmat(:,:)
       
-      complex *16 zk, ima, alpha, beta
+      complex *16 zk, ima
 
       integer, allocatable :: norders(:),ixys(:),iptype(:)
       integer, allocatable :: ixyso(:),nfars(:)
@@ -20,26 +20,25 @@ c
       real *8, allocatable :: ts_targ(:)
       real *8, allocatable :: ab(:,:)
       real *8 :: errs(500), rres(500)
-      real *8 xyz_out(2),xyz_in(2)
-      complex *16, allocatable :: sigma(:)
-      complex * 16 zpars(3)
-      real *8 dpars(2)
+      real *8 xyz_out(2),xyz_in(2),gmat(2,2),mu(2)
+      real *8, allocatable :: sigma(:,:), sigma2(:,:)
+      complex * 16 zpars
+      real *8 dpars(2), alpha, beta
       integer opdims(2), info
       external fstarn_simple
       procedure (), pointer :: fker
-      external h2d_slp, h2d_dlp, h2d_comb
+      external st2d_slp_wrap, st2d_dlp_wrap, st2d_comb_wrap
       data ima /(0d0,1d0)/
 
+      real *8 ucc(2), ucc2(2)
+      
       call prini(6,13)
 
       done = 1
       pi = atan(done)*4
 
-
-      zk = 4.0d1
-
-      alpha=-2*ima
-      beta=-2
+      alpha=1
+      beta=1
 
       
       nchmax = 20000
@@ -52,7 +51,7 @@ c
 
       irefinel = 0
       irefiner = 0
-      rlmax = 2*pi/max(abs(real(zk)),1d0)
+      rlmax = huge(1d0)
       ta = -pi
       tb = pi
       ifclosed = 1
@@ -79,52 +78,54 @@ c
       call prinf("npts *",npts,1)      
 
 
-
-      zpars(1) = zk
-      zpars(2) = 1
-      zpars(3) = 0
-
       xyz_out(1) = 3.17d0
       xyz_out(2) = -0.03d0
+      mu(1) = 1.0d0
+      mu(2) = 1.1d0
 
       xyz_in(1) = 0.17d0
       xyz_in(2) = 0.23d0
 
       ntin = 1
       
-      allocate(sigma(npts),ubdry(npts),uin(ntin))
+      allocate(sigma(2,npts),ubdry(2,npts),uin(2,ntin))
+      allocate(sigma2(2,npts))
 
 c     get boundary data
       
       do i=1,npts
-        call h2d_slp(xyz_out,2,srcvals(1,i),0,dpars,1,zpars,0,
-     1     ipars,ubdry(i))
+        call st2d_slp_wrap(xyz_out,2,srcvals(1,i),0,dpars,1,zpars,0,
+     1        ipars,gmat)
+        ubdry(1,i) = gmat(1,1)*mu(1) + gmat(1,2)*mu(2)
+        ubdry(2,i) = gmat(2,1)*mu(1) + gmat(2,2)*mu(2)
       enddo
 
 c     test data
       
-      call h2d_slp(xyz_out,2,xyz_in,0,dpars,1,zpars,0,
-     1     ipars,uin)
+      call st2d_slp_wrap(xyz_out,2,xyz_in,0,dpars,1,zpars,0,
+     1     ipars,gmat)
 
+      uin(1,1) = gmat(1,1)*mu(1)+gmat(1,2)*mu(2)
+      uin(2,1) = gmat(2,1)*mu(1)+gmat(2,2)*mu(2)
+      
 
-c     build system matrix (-1/2 I + D)
+c     build system matrix (1/2 beta*I + alpha*S + beta*D + W)
 
-      allocate(sysmat(npts,npts),ipiv(npts))
+      allocate(sysmat(2*npts,2*npts),ipiv(2*npts))
 
       ising = 0
       iquadtype = 0
       ifrobust = 0
-      opdims(1) = 1
-      opdims(2) = 1
-      ndz = 1
-      ndd = 0
+      opdims(1) = 2
+      opdims(2) = 2
+      ndz = 0
+      ndd = 2
       ndi = 0
-      zpars(1) = zk
-      zpars(2) = alpha
-      zpars(3) = beta
-      fker => h2d_comb
+      dpars(1) = alpha
+      dpars(2) = beta
+      fker => st2d_comb_wrap
       call cpu_time(t1)
-      call zchunk_matbuild_ggq(nch,norders,ixys,
+      call dchunk_matbuild_ggq(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,adjs,fker,ndd,dpars,
      2     ndz,zpars,ndi,ipars,opdims,ising,iquadtype,ifrobust,
      3     sysmat,ier)
@@ -134,33 +135,63 @@ c     build system matrix (-1/2 I + D)
       write(*,*) 'time matbuild', t2-t1
       write(*,*) 'npts ', npts
 
+      allocate(qwts(npts))
+      call get_qwts2d(nch,norders,ixys,iptype,npts,srcvals,qwts)      
       
       do i = 1,npts
-         sysmat(i,i) = sysmat(i,i)-0.5d0*beta
-         sigma(i) = ubdry(i)
+         ii = 2*(i-1)+1
+         sysmat(ii,ii) = sysmat(ii,ii)+0.5d0*beta
+         ii = ii + 1
+         sysmat(ii,ii) = sysmat(ii,ii)+0.5d0*beta
+         sigma2(1,i) = ubdry(1,i)
+         sigma2(2,i) = ubdry(2,i)
+         do j = 1,npts
+            ii = 2*(i-1)+1
+            jj = 2*(j-1)+1
+            sysmat(jj,ii) = sysmat(jj,ii) + qwts(i)
+            ii = ii+1
+            jj = jj+1
+            sysmat(jj,ii) = sysmat(jj,ii) + qwts(i)
+         enddo
       enddo
 
       call cpu_time(t1)
       nrhs=1
-      call zgesv(npts, nrhs, sysmat, npts, ipiv, sigma, npts,
+      npts2=2*npts
+      call dgesv(npts2, nrhs, sysmat, npts2, ipiv, sigma2, npts2,
      1     info)
       call cpu_time(t2)
+
+      ucc2(:)=0
+      do i = 1,npts
+         
+         ucc2(1) = ucc2(1) + qwts(i)*sigma2(1,i)
+         ucc2(2) = ucc2(2) + qwts(i)*sigma2(2,i)
+      enddo
+
+      
+      call prinf('info *',info,1)
+      call prin2('sigma2 *',sigma2,10)
 
       write(*,*) 'time solve with LAPACK', t2-t1
       write(*,*) 'info ', info
 
-      zpars(1) = zk
-      zpars(2) = alpha
-      zpars(3) = beta
-      numit=abs(real(zk))+1000
+      dpars(1) = alpha
+      dpars(2) = beta
+      numit=100
       ifinout=0
+      ifnocorr=0
       eps_gmres=1d-14
       call cpu_time(t1)
-      call helm_comb_dir_solver_2d(nch,norders,ixys,
-     1     iptype,npts,srccoefs,srcvals,adjs,eps,zpars,numit,
-     2     ifinout,ubdry,eps_gmres,niter,errs,rres,sigma)
+      call stok_comb_dir_solver_2d(nch,norders,ixys,
+     1     iptype,npts,srccoefs,srcvals,adjs,eps,dpars,
+     2     ifnocorr,numit,
+     2     ifinout,ubdry,eps_gmres,niter,errs,rres,sigma,ucc)
       call cpu_time(t2)
 
+      call prin2('sigma *',sigma,10)
+
+      
       write(*,*) 'time solve with GMRES', t2-t1
       
 
@@ -178,29 +209,37 @@ c     build system matrix (-1/2 I + D)
         ts_targ(i) = 0
       enddo
 
-      zpars(1) = zk
-      zpars(2) = alpha
-      zpars(3) = beta
+      dpars(1) = alpha
+      dpars(2) = beta
 
-      allocate(potbdry(npts),potin(ntin))
+      allocate(potbdry(2,npts),potin(2,ntin),potin2(2,ntin))
       
-c      call lpcomp_helm_comb_dir_2d(nch,norders,ixys,
-c     1     iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,ich_id,
-c     2     ts_targ,eps,zpars,sigma,potbdry)
-
       ndtarg2 = 2
       n1 = 1
-      call lpcomp_helm_comb_dir_2d(nch,norders,ixys,
+      call lpcomp_stok_comb_dir_2d(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,ndtarg2,n1,xyz_in,ich_id,
-     2     ts_targ,eps,zpars,sigma,potin)
+     2     ts_targ,eps,dpars,sigma,potin)
+      call lpcomp_stok_comb_dir_2d(nch,norders,ixys,
+     1     iptype,npts,srccoefs,srcvals,ndtarg2,n1,xyz_in,ich_id,
+     2     ts_targ,eps,dpars,sigma2,potin2)
+
+
+      potin(1,1) = potin(1,1)+ucc(1)
+      potin(2,1) = potin(2,1)+ucc(2)
+      potin2(1,1) = potin2(1,1)+ucc2(1)
+      potin2(2,1) = potin2(2,1)+ucc2(2)
 
       call prin2('pot in *',potin,2)
+      call prin2('pot in 2 *',potin2,2)
       call prin2('u in *',uin,2)
 
-      write(*,*) abs(potin(1)-uin(1))
+      write(*,*) abs(potin(1,1)-uin(1,1))
+      write(*,*) abs(potin(2,1)-uin(2,1))
+      write(*,*) abs(potin2(1,1)-uin(1,1))
+      write(*,*) abs(potin2(2,1)-uin(2,1))
 
       nsuccess = 0
-      if (abs(potin(1)-uin(1)) .lt. eps) nsuccess=1
+      if (abs(potin(1,1)-uin(1,1)) .lt. eps) nsuccess=1
       ntests=1
       
 c      open(unit=33,file='../../print_testres.txt',access='append')
@@ -283,3 +322,44 @@ c
 
 
 
+      subroutine st2d_dlp_wrap(x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,
+     1     ipars,f)
+      implicit real *8 (a-h,o-z)
+      real *8 x(8), y(ndtarg), dpars(ndd)
+      complex *16 zpars
+      integer ipars
+      real *8 f(2,2)
+
+      call st2d_dlp_vec(4,x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,
+     1     ipars,f)
+      return
+      end
+
+      subroutine st2d_slp_wrap(x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,
+     1     ipars,f)
+      implicit real *8 (a-h,o-z)
+      real *8 x(8), y(ndtarg), dpars(ndd)
+      complex *16 zpars
+      integer ipars
+      real *8 f(2,2)
+
+      call st2d_slp_vec(4,x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,
+     1     ipars,f)
+      return
+      end
+
+
+      subroutine st2d_comb_wrap(x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,
+     1     ipars,f)
+      implicit real *8 (a-h,o-z)
+      real *8 x(8), y(ndtarg), dpars(ndd)
+      complex *16 zpars
+      integer ipars
+      real *8 f(2,2)
+
+      call st2d_comb_vec(4,x,ndtarg,y,ndd,dpars,ndz,zpars,ndi,
+     1     ipars,f)
+      return
+      end
+
+      

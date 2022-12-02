@@ -8,14 +8,17 @@
       real *8, allocatable :: pot(:,:),potslp(:,:),potdlp(:,:)
       real *8, allocatable :: pot2(:,:),potslp2(:,:),potdlp2(:,:)
       real *8, allocatable :: slpmat(:,:), dlpmat(:,:)
+      real *8, allocatable :: slp_near(:,:), dlp_near(:,:)      
+      real *8, allocatable :: srcover(:,:), wover(:)      
 
       integer opdims(2)
       
-      integer, allocatable :: norders(:),ixys(:),iptype(:)
+      integer, allocatable :: norders(:),ixys(:),iptype(:),row_ptr(:),
+     1     col_ind(:),iquad(:)
 
-      integer, allocatable :: ich_id(:)
+      integer, allocatable :: ich_id(:), novers(:), ixyso(:)
       real *8, allocatable :: ts_targ(:)
-      real *8, allocatable :: ab(:,:)
+      real *8, allocatable :: ab(:,:), rects(:,:,:)
       real *8 xyz_out(2),xyz_in(2)
       integer ipars(2)
       complex *16 zpars
@@ -36,6 +39,7 @@
       call stok_kernel_test(ipass)
 
       write(*,*) ipass
+
 
       done = 1
       pi = atan(done)*4
@@ -63,17 +67,19 @@
       dpars(1) = 1d0
       dpars(2) = 0.2d0
 
-      ipars(1) = 3
-      nover = 3
+      ipars(1) = 5
+      nover = 2
       nch = 0
       ier = 0
-      eps = 1.0d-12
+      eps = 1.0d-9
       call chunkfunc_guru(eps,rlmax,ifclosed,irefinel,irefiner,rlmaxe,
      1  ta,tb,fstarn_simple,ndd,dpars,ndz,zpars,ndi,ipars,nover,
      2  k,nchmax,nch,norders,ixys,iptype,npts,srcvals,srccoefs,ab,adjs,
-     3  ier)
+     3     ier)
 
-      eps = 1d-8
+      call prinf('nch *',nch,1)
+
+      eps = 1d-12
 
       xyz_out(1) = 3.17d0
       xyz_out(2) = 1.3d0
@@ -133,7 +139,7 @@ c     test just at interior target
 
       dpars(1) = 0
       dpars(2) = 1
-      
+
       call lpcomp_stok_comb_dir_2d(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,ndtarg,ntarg1,xyz_in,
      2     ich_id_in,ts_targ_in,eps,dpars,uval,potdlpin)
@@ -156,7 +162,7 @@ c     test just at interior target
       err = sqrt(errl2/rell2)
       
       call prin2('error in greens identity, interior pt=*',err,1)
-      
+
       
 c     test on boundary
       
@@ -178,49 +184,125 @@ c     test on boundary
       call get_chunk_id_ts(nch,norders,ixys,iptype,npts, 
      1         ich_id,ts_targ)
 
+c
+c    find near field
+c
 
+      eps=1.1d-12
+      rho = 2d0
+      npolyfac=2
+
+      allocate(novers(nch),ixyso(nch+1))
+      
+      call ellipse_nearfield2d_getnovers(eps,rho,npolyfac,
+     1     nch,norders,ising,novers,ier)
+      call prinf('nover *',novers,1)
+      
+      ixyso(1)=1
+      do i = 1,nch
+         ixyso(i+1)=ixyso(i)+novers(i)
+      enddo
+      npts_over=ixyso(nch+1)-1
+
+      allocate(rects(2,4,nch))
+      call ellipse_nearfield2d_definerects(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,rho,rects)
+
+      call findinrectangle_mem(nch,rects,npts,ndtarg,targs,nnz,
+     1     ier)
+
+      allocate(row_ptr(npts+1),col_ind(nnz))
+
+      call findinrectangle(nch,rects,npts,ndtarg,targs,row_ptr,
+     1     nnz,col_ind,ier)
+
+      allocate(iquad(nnz+1)) 
+      call get_iquad_rsc2d(nch,ixys,npts,nnz,row_ptr,col_ind,
+     1     iquad)
+
+      nquad = iquad(nnz+1)-1
+
+      ndtarg = 2
+
+      ikerorder = -1
+
+
+      npts_over = ixyso(nch+1)-1
+
+      allocate(srcover(8,npts_over),wover(npts_over))
+
+          
+      call oversample_geom2d(nch,norders,ixys,iptype,npts, 
+     1     srccoefs,srcvals,novers,ixyso,npts_over,srcover)
+      
+      call get_qwts2d(nch,novers,ixyso,iptype,npts_over,
+     1     srcover,wover)
+
+
+      allocate(slp_near(4,nquad),dlp_near(4,nquad))
+      
       dpars(1) = 1
       dpars(2) = 0
       
-      call lpcomp_stok_comb_dir_2d(nch,norders,ixys,
+      iquadtype = 1
+
+      call getoncurvequad_stok_comb_dir_2d(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,adjs,
+     2     eps,dpars,iquadtype,nnz,row_ptr,col_ind,
+     3     iquad,nquad,slp_near)
+
+c      call getnearquad_lap_comb_dir_2d(nch,norders,
+c     1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
+c     1      ich_id,ts_targ,eps,dpars,iquadtype,
+c     1      nnz,row_ptr,col_ind,iquad,nquad,dlp_near)
+c      call lpcomp_stok_comb_dir_2d(nch,norders,ixys,
+c     1     iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
+c     2     ich_id,ts_targ,eps,dpars,tracval,potslp)
+
+      call lpcomp_stok_comb_dir_addsub_2d(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
-     2     ich_id,ts_targ,eps,dpars,tracval,potslp)
+     2     eps,dpars,nnz,row_ptr,col_ind,iquad,nquad,slp_near,
+     3     tracval,novers,npts_over,ixyso,srcover,wover,potslp)
+
+      
 
       dpars(1) = 0
       dpars(2) = 1
-      
-      call lpcomp_stok_comb_dir_2d(nch,norders,ixys,
-     1     iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
-     2     ich_id,ts_targ,eps,dpars,uval,potdlp)
 
+      call getoncurvequad_stok_comb_dir_2d(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,adjs,
+     2     eps,dpars,iquadtype,nnz,row_ptr,col_ind,
+     3     iquad,nquad,dlp_near)
+      
+      
+c      call lpcomp_stok_comb_dir_2d(nch,norders,ixys,
+c     1     iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
+c     2     ich_id,ts_targ,eps,dpars,uval,potdlp)
+
+      call lpcomp_stok_comb_dir_addsub_2d(nch,norders,ixys,
+     1     iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
+     2     eps,dpars,nnz,row_ptr,col_ind,iquad,nquad,dlp_near,
+     3     uval,novers,npts_over,ixyso,srcover,wover,potdlp)
+
+      
       call cpu_time(t2)
       tlpcomp = t2-t1
 
+      call prin2('time lp comp *',tlpcomp,1)
+
 c
-c      compute error
+c     test Green's ID on boundary
 c
-      errl2 = 0
-      rl2 = 0
+
       do i=1,npts
         pot(1,i) = (potslp(1,i) + potdlp(1,i))*2
         pot(2,i) = (potslp(2,i) + potdlp(2,i))*2
-        errl2 = errl2 + abs(uval(1,i)-pot(1,i))**2*wts(i)
-        errl2 = errl2 + abs(uval(2,i)-pot(2,i))**2*wts(i)
-        rl2 = rl2 + abs(uval(1,i))**2*wts(i)
-        rl2 = rl2 + abs(uval(2,i))**2*wts(i)
-
-        if(i.lt.5) then
-           write(*,*) potslp(1,i), potdlp(1,i)
-c           write(*,*) i
-c           write(*,*) uval(1,i)/pot(1,i), uval(1,i), pot(1,i)
-c           write(*,*) uval(2,i)/pot(2,i), uval(2,i), pot(2,i)
-        endif
       enddo
 
 
-      err = sqrt(errl2/rl2)
+      call test_wl2err(2,npts,wts,uval,pot,errl2,rell2,relerr)
 
-      call prin2('error in greens identity, on bdry=*',err,1)
+      call prin2('error in greens identity, on bdry=*',relerr,1)
 
       i1 = 0
       if(err.lt.1.0d-2) i1 = 1
@@ -228,19 +310,19 @@ c           write(*,*) uval(2,i)/pot(2,i), uval(2,i), pot(2,i)
       opdims(1)=2
       opdims(2)=2
       ising = 0
-      iquad = 1
+      iquadt = 1
       ifrobust = 0
       npts2 = 2*npts
       allocate(slpmat(npts2,npts2),dlpmat(npts2,npts2))
       
       call dchunk_matbuild_ggq(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,adjs,st2d_slp_wrap,ndd,dpars,
-     2     ndz,zpars,ndi,ipars,opdims,ising,iquad,ifrobust,
+     2     ndz,zpars,ndi,ipars,opdims,ising,iquadt,ifrobust,
      3     slpmat,ier)
 
       call dchunk_matbuild_ggq(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,adjs,st2d_dlp_wrap,ndd,dpars,
-     2     ndz,zpars,ndi,ipars,opdims,ising,iquad,ifrobust,
+     2     ndz,zpars,ndi,ipars,opdims,ising,iquadt,ifrobust,
      3     dlpmat,ier)
 
       allocate(potdlp2(2,npts),potslp2(2,npts),pot2(2,npts))

@@ -757,7 +757,7 @@ c
 c
 c        
       subroutine stok_comb_dir_solver_2d(nch,norders,ixys,
-     1     iptype,npts,srccoefs,srcvals,eps,dpars,ifnocorr,
+     1     iptype,npts,srccoefs,srcvals,adjs,eps,dpars,ifnocorr,
      2     numit,ifinout,rhs,eps_gmres,niter,errs,rres,soln,ucc)
 c
 c     Solve the Stokes velocity boundary value problem using the
@@ -836,7 +836,7 @@ c
       integer nch,norder,npols,npts
       integer ifinout, ifnocorr
       integer norders(nch),ixys(nch+1)
-      integer iptype(nch)
+      integer iptype(nch),adjs(2,nch)
       real *8 srccoefs(6,npts),srcvals(8,npts),eps,eps_gmres
       real *8 dpars(2)
       real *8 rhs(2,npts)
@@ -849,7 +849,7 @@ c
 
       real *8 errs(numit+1)
       real *8 rres,eps2
-      integer niter
+      integer niter, ier
 
 
       integer nover,npolso,nptso
@@ -868,12 +868,14 @@ c
 
 
       real *8 ttot,done,pi
-      real *8 rfac,rfac0
+      real *8 rfac,rfac0,rho
       integer iptype_avg,norder_avg
       integer ikerorder, iquadtype,npts_over
 
       integer npts2,ii,jj
 
+      integer ising, npolyfac
+      
 c
 c
 c       gmres variables
@@ -884,7 +886,7 @@ c
       real *8 rmyerr
       real *8 temp
       real *8, allocatable :: vmat(:,:),hmat(:,:)
-      real *8, allocatable :: cs(:),sn(:)
+      real *8, allocatable :: cs(:),sn(:),rects(:,:,:)
       real *8, allocatable :: svec(:),yvec(:),wtmp(:)
       real *8 uu,vv
 
@@ -921,59 +923,38 @@ c    initialize patch_id and uv_targ for on surface targets
 c
       call get_chunk_id_ts(nch,norders,ixys,iptype,npts,
      1  ich_id,ts_targ)
-c
-c
-c     this might need fixing
-c
-      iptype_avg = floor(sum(iptype)/(nch+0.0d0))
-      norder_avg = floor(sum(norders)/(nch+0.0d0))
 
-
-      call get_rfac2d(norder_avg,iptype_avg,rfac) 
-      allocate(cms(2,nch),rads(nch),rad_near(nch))
-
-      call get_centroid_rads2d(nch,norders,ixys,iptype,npts, 
-     1     srccoefs,srcvals,cms,rads)
-
-C$OMP PARALLEL DO DEFAULT(SHARED) 
-      do i=1,nch
-        rad_near(i) = rads(i)*rfac
-      enddo
-C$OMP END PARALLEL DO      
-
-c
-c    find near quadrature correction interactions
-c
-      call findnear2dmem(cms,nch,rad_near,ndtarg,targs,ntarg,nnz)
-
-      allocate(row_ptr(ntarg+1),col_ind(nnz))
-      
-      call findnear2d(cms,nch,rad_near,ndtarg,targs,ntarg,row_ptr, 
-     1        col_ind)
-
-      allocate(iquad(nnz+1)) 
-      call get_iquad_rsc2d(nch,ixys,ntarg,nnz,row_ptr,col_ind,
-     1         iquad)
-
-      ikerorder = -1
-      if(abs(dpars(2)).gt.1.0d-16) ikerorder = 0
-
-c
-c    estimate oversampling for far-field, and oversample geometry
-c
+      rho = 2d0
+      npolyfac=2
 
       allocate(novers(nch),ixyso(nch+1))
+      
+      call ellipse_nearfield2d_getnovers(eps,rho,npolyfac,
+     1     nch,norders,ising,novers,ier)
 
-c      call get_far_order2d(eps,nch,norders,ixys,iptype,cms,
-c     1    rads,npts,srccoefs,ndtarg,ntarg,targs,ikerorder,dpars(1),
-c     2    nnz,row_ptr,col_ind,rfac,novers,ixyso)
-
-      do i=1,nch
-        novers(i) = norders(i)
-        ixyso(i) = ixys(i)
+      ixyso(1)=1
+      do i = 1,nch
+         ixyso(i+1)=ixyso(i)+novers(i)
       enddo
-      ixyso(nch+1) = ixys(nch+1)
-      npts_over = ixyso(nch+1)-1
+      npts_over=ixyso(nch+1)-1
+
+      allocate(rects(2,4,nch))
+      call ellipse_nearfield2d_definerects(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,rho,rects)
+
+      call findinrectangle_mem(nch,rects,npts,ndtarg,targs,nnz,
+     1     ier)
+
+      allocate(row_ptr(npts+1),col_ind(nnz))
+
+      call findinrectangle(nch,rects,npts,ndtarg,targs,row_ptr,
+     1     nnz,col_ind,ier)
+
+      allocate(iquad(nnz+1)) 
+      call get_iquad_rsc2d(nch,ixys,npts,nnz,row_ptr,col_ind,
+     1     iquad)
+c
+      
 
       allocate(srcover(8,npts_over),wover(npts_over),wstd(npts))
 
@@ -1003,10 +984,15 @@ C$OMP END PARALLEL DO
 
       iquadtype = 1
 
-      call getnearquad_stok_comb_dir_2d(nch,norders,
-     1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,ntarg,targs,
-     1      ich_id,ts_targ,eps,dpars,iquadtype,nnz,row_ptr,col_ind,
-     1      iquad,nquad,wnear)
+      call getoncurvequad_stok_comb_dir_2d(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,adjs,
+     2     eps,dpars,iquadtype,nnz,row_ptr,col_ind,
+     3     iquad,nquad,wnear)
+      
+c      call getnearquad_stok_comb_dir_2d(nch,norders,
+c     1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,ntarg,targs,
+c     1      ich_id,ts_targ,eps,dpars,iquadtype,nnz,row_ptr,col_ind,
+c     1      iquad,nquad,wnear)
       
       print *, "done generating near quadrature, now starting gmres"
 
@@ -1020,7 +1006,7 @@ c       the identity scaling (z) is defined via did below,
 c       and K represents the action of the principal value 
 c       part of the matvec
 c
-      did = -(-1)**(ifinout)*dpars(2)/2
+      did = (-1)**(ifinout)*dpars(2)/2
 
 
       niter=0
@@ -1244,3 +1230,175 @@ c
 c
 c
 c        
+      subroutine getoncurvequad_stok_comb_dir_2d(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,adjs,
+     2     eps,dpars,iquadtype,nnz,row_ptr,col_ind,
+     3     iquad,nquad,wnear)
+c     
+c------------------------------
+c  This subroutine generates the near field quadrature 
+c  for the representation 
+c
+c
+c  .. math ::
+c  
+c      u = (\alpha \mathcal{S} + \beta \mathcal{D})
+c
+c  Note: For targets on the boundary, this routine only computes
+c  the principal value part, the identity term corresponding to the jump
+c  in the layer potential is not included in the quadrature.
+c
+c  Currently, the only scheme available for computing the quadrature
+c  is adaptive integration
+c
+c  Input arguments:
+c    - nch: integer
+c        number of chunks
+c    - norders: integer(nch)
+c        order of discretization on each patch 
+c    - ixys: integer(nch+1)
+c        starting location of data on patch i
+c    - iptype: integer(nch)
+c        type of patch
+c        iptype = 1 -> chunk discretized with Gauss Legendre nodes
+c    - npts: integer
+c        total number of discretization points on the boundary
+c    - srccoefs: real *8 (6,npts)
+c        basis coefficients of x,y,dxdt,dydt,dxdt2,dydt2
+c        if(iptype.eq.1) then basis = legendre polynomials
+c    - srcvals: real *8 (8,npts)
+c        x,y,dxdt,dydt,dxdt2,dydt2,rnx,rny at the discretization nodes
+c    - ndtarg: integer
+c        leading dimension of target array
+c    - ntarg: integer
+c        number of targets
+c    - targs: real *8 (ndtarg,ntarg)
+c        target information, the first two components must be
+c        xy coordinates
+c    - ich_id: integer(ntarg)
+c        id of patch of target i, id = -1, if target is off-surface
+c    - ts_targ: real *8 (ntarg)
+c        local t coordinate of chunk if on-surface
+c    - eps: real *8
+c        precision requested
+c    - dpars: real *8 (2)
+c        kernel parameters (Referring to formula (1))
+c        dpars(1) = alpha
+c        dpars(2) = beta
+c    - iquadtype - integer
+c        quadrature type
+c        iquadtype = 1, use adaptive quadrature for everything 
+c    - nnz: integer
+c        number of source patch-> target interactions in the near field
+c    - row_ptr: integer(ntarg+1)
+c        row_ptr(i) is the pointer to col_ind array where list of 
+c        relevant source patches for target i start
+c    - col_ind: integer (nnz)
+c        list of source patches relevant for all targets, sorted
+c        by the target number
+c    - iquad: integer(nnz+1)
+c        location in wnear array where quadrature for col_ind(i)
+c        starts
+c    - nquad: integer
+c        number of entries in wnear
+c
+c  Output
+c
+c    - wnear: complex *16(nquad)
+c        the desired near field quadrature
+c               
+c
+
+      implicit none 
+      integer, intent(in) :: nch,norders(nch),npts,nquad
+      integer, intent(in) :: ixys(nch+1),iptype(nch)
+      real *8, intent(in) :: srccoefs(6,npts),srcvals(8,npts),eps
+      integer, intent(in) :: iquadtype,adjs(2,nch)
+      real *8, intent(in) :: dpars(2)
+      integer, intent(in) :: nnz
+      integer, intent(in) :: row_ptr(npts+1),col_ind(nnz),iquad(nnz+1)
+      real *8, intent(out) :: wnear(4,nquad)
+
+
+      integer ndd,ndz,ndi,ier,nd8,l
+      real *8 alpha,beta,rho
+      integer i,j
+      integer ipv
+      integer ipars(2), ijloc(2,4)
+      complex *16 zpars
+      real *8, allocatable :: wnear1(:)
+
+      procedure (), pointer :: fker
+      external st2d_slp, st2d_dlp, st2d_comb
+      
+
+c
+c
+c        initialize the appropriate kernel function
+c
+
+      alpha = dpars(1)
+      beta = dpars(2)
+
+      ijloc(1,1) = 1
+      ijloc(2,1) = 1
+      ijloc(1,2) = 2
+      ijloc(2,2) = 1            
+      ijloc(1,3) = 1
+      ijloc(2,3) = 2            
+      ijloc(1,4) = 2
+      ijloc(2,4) = 2            
+
+      ndd = 2
+      ndi = 2
+      ndz = 0
+      
+      if(iquadtype.eq.1) then
+        fker => st2d_comb
+        if(abs(alpha).ge.1.0d-16.and.abs(beta).lt.1.0d-16) then
+          fker=>st2d_slp
+        else if(abs(alpha).lt.1.0d-16.and.abs(beta).ge.1.0d-16) then
+          fker=>st2d_dlp
+        endif
+        ipv = 0
+        
+        allocate(wnear1(nquad))
+
+        do l = 1,4
+           ipv = 0
+           ipars(1)=ijloc(1,l)
+           ipars(2)=ijloc(2,l)
+           
+           call dgetoncurvequad_ggq2d(nch,norders,ixys,
+     1          iptype,npts,srccoefs,srcvals,adjs,
+     1          eps,ipv,fker,ndd,dpars,ndz,zpars,
+     1          ndi,ipars,nnz,row_ptr,col_ind,iquad,nquad,wnear1,ier)
+
+           if(abs(alpha).ge.1.0d-16.and.abs(beta).lt.1.0d-16) then
+C$OMP PARALLEL DO DEFAULT(SHARED)        
+              do i=1,nquad
+                 wnear(l,i) = wnear1(i)*alpha
+              enddo
+C$OMP END PARALLEL DO        
+           else if(abs(alpha).lt.1.0d-16.and.abs(beta).ge.1.0d-16) then
+C$OMP PARALLEL DO DEFAULT(SHARED)        
+              do i=1,nquad
+                 wnear(l,i) = wnear1(i)*beta
+              enddo
+C$OMP END PARALLEL DO        
+           else
+C$OMP PARALLEL DO DEFAULT(SHARED)        
+              do i=1,nquad
+                 wnear(l,i) = wnear1(i)
+              enddo
+C$OMP END PARALLEL DO        
+           endif
+        enddo
+      endif
+
+
+      return
+      end
+c
+c
+c

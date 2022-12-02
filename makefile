@@ -92,7 +92,8 @@ COMOBJS = $(COM)/hkrand.o \
 	$(COM)/sort.o \
 	$(COM)/sparse_reps.o $(COM)/rotmat_gmres.o \
 	$(COM)/get_fmm2d_thresh.o $(COM)/lege_extras.o \
-	$(COM)/findinrectangle.o $(COM)/pnpoly.o
+	$(COM)/findinrectangle.o $(COM)/pnpoly.o \
+	$(COM)/convhull2d.o
 
 # Surface wrappers
 SURF = src/curve_routs
@@ -103,7 +104,8 @@ SOBJS = $(SURF)/chunks.o $(SURF)/curve_routs.o \
 QUAD = src/quadratures
 QOBJS = $(QUAD)/near_field_routs.o $(QUAD)/adap_quads.o \
 	$(QUAD)/self_quads2d.o $(QUAD)/ggq2dstd_quads.o \
-	$(QUAD)/ggq2dmatbuild.o $(QUAD)/ellipseprecisiontabs.o
+	$(QUAD)/ggq2dmatbuild.o $(QUAD)/ellipseprecisiontabs.o \
+	$(QUAD)/ellipsehelpers2d.o
 
 # Chunk adaptive integration routines
 CHUNK = src/chunk_routs
@@ -241,6 +243,7 @@ test/lap:
 
 test/stok: 
 	$(FC) $(FFLAGS) test/stok_wrappers/test_stok_qg_lp.f -o test/stok_wrappers/int2-stok lib-static/$(STATICLIB) $(LIBS)
+	$(FC) $(FFLAGS) test/stok_wrappers/test_stok_dmatbuild.f -o test/stok_wrappers/int2-stok-mat lib-static/$(STATICLIB) $(LIBS)
 
 TESTCOMOBJS = test/common/test_rsc_to_csc.o
 

@@ -865,3 +865,599 @@ c
       return
       end
       
+
+
+
+      subroutine zgetoncurvequad_ggq2d(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,adjs,eps,ipv,
+     2     fker,ndd,dpars,ndz,zpars,ndi,ipars,nnz,row_ptr,
+     3     col_ind,iquad,nquad,wnear,ier)
+c
+c------------------------
+c     This subroutine generates the near field quadrature
+c     for on curve interactions
+c     for a given kernel which is assumed to be
+c     a compact value integral operator (principal value and 
+c     hypersingular options will be added in later)
+c     where the near field is specified by the user 
+c     in row sparse compressed format.
+c     
+c     The quadrature is computed by generalized Gaussian
+c     quadrature for self and near interactions and adaptive
+c     integration for other interactions
+c
+c  Input arguments:
+c
+c    - nch: integer
+c        number of chunks
+c    - norders: integer(nch)
+c        order of discretization on each chunk
+c    - ixys: integer(nch+1)
+c        ixys(i) denotes the starting location in srccoefs,
+c        and srcvals array corresponding to chunk i
+c    - iptype: integer(nch)
+c        type of chunk
+c        *  iptype = 1, triangular chunk discretized using RV nodes
+c    - npts: integer
+c        total number of discretization points on the boundary
+c    - srccoefs: double precision (6,npts)
+c        Basis coefficients of x,y,dxdt,dydt,dxdt2,dydt2
+c        if(iptype.eq.1) then basis = Legendre polynomials
+c    - srcvals: double precision (8,npts)
+c        x,y,dxdt,dydt,dxdt2,dydt2,rnx,rny at discretization points
+c    - eps: double precision
+c        precision requested
+c    - ipv: integer
+c        Flag for choosing type of self-quadrature
+c        * ipv = 0, for compact/weakly singular operators
+c        * ipv = 1, for singular operators (Currently not supported)
+c        * ipv = 2, for hypersingular operators (currently not supported)
+c    - fker: procedure pointer
+c        function handle for the kernel. Calling sequence 
+c        * fker(srcinfo,ndtarg,targinfo,ndd,dpars,ndz,zpars,ndi,ipars,val)
+c    - ndd: integer
+c        number of double precision parameters
+c    - dpars: double precision(ndd)
+c        double precision parameters
+c    - ndz: integer
+c        number of double complex parameters
+c    - zpars: double complex(ndz)
+c        double complex parameters
+c    - ndi: integer
+c        number of integer parameters
+c    - ipars: integer(ndi)
+c        integer parameters
+c    - nnz: integer
+c        number of source chunk-> target interactions in the near field
+c    - row_ptr: integer(ntarg+1)
+c        row_ptr(i) is the pointer
+c        to col_ind array where list of relevant source chunkes
+c        for target i start
+c    - col_ind: integer (nnz)
+c        list of source chunkes relevant for all targets, sorted
+c        by the target number
+c    - iquad: integer(nnz+1)
+c        location in wnear array where quadrature for col_ind(i)
+c        starts
+c    - nquad: integer
+c        number of entries in wnear
+c
+c  Output parameters:
+c
+c    - wnear: double complex(nquad)
+c        near field quadrature corrections
+c----------------------------------------------------               
+c
+      implicit real *8 (a-h,o-z)
+      integer, intent(in) :: ndi,ndd,ndz,ipv
+      integer, intent(out) :: ier, adjs(2,nch)
+      integer, intent(in) :: ipars(ndi)
+      integer, intent(in) :: nch,norders(nch),npts
+      integer, intent(in) :: ixys(nch+1),iptype(nch)
+      real *8, intent(in) :: srccoefs(6,npts),srcvals(8,npts),eps
+      real *8, intent(in) :: dpars(ndd)
+      complex *16, intent(in) :: zpars(ndz)
+      integer, intent(in) :: nnz
+      integer, intent(in) :: row_ptr(npts+1),col_ind(nnz),iquad(nnz+1)
+      complex *16, intent(out) :: wnear(nquad)
+
+      integer nchmax
+      integer, allocatable :: row_ind(:),col_ptr(:),iper(:),ichunk(:)
+      real *8, allocatable :: umat(:,:),vmat(:,:),ts(:),wts(:)
+      complex *16, allocatable :: zints(:),ztmp(:)
+      integer itarg,kmax,opdims(2)
+      real *8, allocatable :: xs1(:), ws1(:), xs0(:,:), ws0(:,:)
+      real *8, allocatable :: ainterp1(:,:), ainterp0(:,:,:)
+      real *8, allocatable :: work(:), dwork(:),srcnbor(:,:)
+      integer, allocatable :: nquads0(:), iquad0lddr(:), inborlist(:)
+      complex *16, allocatable :: zwork(:), submat(:,:),submatnbor(:)
+      
+      external fker
+
+      ier = 0
+      
+      norder = norders(1)
+      do i = 2,nch
+         if (norders(i) .ne. norder) then
+            ier = 1
+            return
+         endif
+      enddo
+
+      itype = 2
+      allocate(ts(norder),umat(norder,norder),vmat(norder,norder),
+     1     wts(norder))
+      call legeexps(itype,norder,ts,umat,vmat,wts)
+      allocate(zints(norder+5),ztmp(norder+5))
+
+c     load ggq nodes
+
+      call ggq2dstd_get_quads_info(norder, nquad1, nquad0, ier1)
+      if (ier1 .ne. 0) then
+         ier = 2
+         return
+      endif
+      allocate(xs1(nquad1), ws1(nquad1))
+      allocate(xs0(nquad0,norder), ws0(nquad0,norder))
+      call ggq2dstd_get_quads(norder, nquad1, xs1, ws1, nquad0,
+     1     xs0, ws0)
+
+c     this ladder structure will make it easier later
+c     to use rules that have a variable number of nodes per target
+      
+      allocate(nquads0(norder),iquad0lddr(norder+1))
+      do i = 1,norder
+         nquads0(i) = nquad0
+         iquad0lddr(i) = (i-1)*nquad0+1
+      enddo
+      iquad0lddr(norder+1) = norder*nquad0+1
+
+c     precompute interpolation matrices
+
+      allocate(ainterp1(nquad1,norder),ainterp0(nquad0,norder,norder))
+
+      nquadmax = max(nquad1,nquad0)
+      lwork = 2*norder**2+norder + 100
+      allocate(work(lwork))
+      
+      call lematrin(norder,nquad1,xs1,ainterp1,ts,work)
+      do i = 1,norder
+         call lematrin(norder,nquad0,xs0(1,i),ainterp0(1,1,i),ts,work)
+      enddo
+
+c     get transpose of interaction info
+
+      allocate(row_ind(nnz),col_ptr(nch+1),iper(nnz))
+      call rsc_to_csc(nch,npts,nnz,row_ptr,col_ind,col_ptr,
+     1     row_ind,iper)
+      
+C$OMP PARALLEL DO
+      do i=1,nquad
+        wnear(i) = 0
+      enddo
+C$OMP END PARALLEL DO      
+
+      allocate(ichunk(npts))
+      
+c$OMP PARALLEL DO
+      do i = 1,nch
+         do j = ixys(i),(ixys(i+1)-1)
+            ichunk(j)=i
+         enddo
+      enddo
+c$OMP END PARALLEL DO      
+
+c     storage for ggq work
+
+      opdims(1)=1
+      opdims(2)=1
+      
+      idim1 = opdims(1)*norder*nch
+      idim1sub = opdims(1)*norder
+      idim1nbor = opdims(1)*norder*2
+      idim2sub = opdims(2)*norder
+      
+      allocate(submat(idim1sub,idim2sub))
+
+      nquadmax = 0
+      nquadmax = max(nquadmax,nquad1)
+      nquadmax = max(nquadmax,norder)
+      do i = 1,norder
+         nquadmax = max(nquadmax,nquads0(i))
+      enddo
+      
+      allocate(dwork((8+1)*nquadmax),
+     1     zwork(opdims(1)*opdims(2)*nquadmax*norder),
+     2     inborlist(2*norder),srcnbor(8,2*norder),
+     3     submatnbor(idim1nbor*idim2sub))
+
+
+c     adaptive integration params
+      
+      nqorder = 10
+      nchmax = 10000
+      ndt = 8
+
+C$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(itarg,j,ich,istart,zints)
+C$OMP$PRIVATE(ztmp,ntarg0,zwork,dwork,submat,ichtarg,ichl,ichr,irel)
+C$OMP$PRIVATE(k,inborlist,inbor,nnbor,srcnbor,submatnbor)
+      do ich=1,nch
+
+         ichl=adjs(1,ich)
+         ichr=adjs(2,ich)
+         istart = ixys(ich)
+         ntarg0=norder
+         call zchunk_indrulematbuild_ggq(norder,srcvals(1,istart),
+     1        ndt,ntarg0,srcvals(1,istart),nquads0,
+     2        iquad0lddr,ainterp0,ws0,fker,ndd,dpars,ndz,zpars,
+     3        ndi,ipars,opdims,submat,zwork,dwork)
+         
+         nnbor=0
+         do j=col_ptr(ich),col_ptr(ich+1)-1
+            itarg = row_ind(j)
+            ichtarg = ichunk(itarg)
+            if (ichtarg .eq. ichl .or. ichtarg .eq. ichr) then
+               nnbor=nnbor+1
+               inborlist(nnbor)=itarg
+               do k=1,8
+                  srcnbor(k,nnbor)=srcvals(k,itarg)
+               enddo
+            endif
+         enddo
+
+         if (nnbor .gt. 0) then
+            call zchunk_onerulematbuild_ggq(norder,srcvals(1,istart),
+     1           nquad1,ainterp1,ws1,ndt,nnbor,srcnbor,fker,
+     2           ndd,dpars,ndz,zpars,ndi,ipars,opdims,submatnbor,
+     3           zwork,dwork)
+         endif
+         
+         inbor=0
+         do j=col_ptr(ich),col_ptr(ich+1)-1
+            itarg = row_ind(j)
+            ichtarg = ichunk(itarg)
+            if (ichtarg .eq. ich) then
+c     self
+               irel = itarg-istart+1
+               do k=1,norder
+                  wnear(iquad(iper(j))+k-1)=submat(irel,k)
+               enddo
+            else if (ichtarg .eq. ichl .or. ichtarg .eq. ichr) then
+c     neighbor rule
+               inbor=inbor+1
+               call zchunk_buildmat_readrow(nnbor,norder,
+     1              submatnbor,inbor,wnear(iquad(iper(j))))
+            else
+               ntarg0=1
+               call zchunkints_lege(eps,norders(ich),srccoefs(1,istart),
+     1              ndt,ntarg0,srcvals(1,itarg),norders(ich),fker,
+     2              ndd,dpars,ndz,zpars,ndi,ipars,nqorder,nchmax,
+     3              zints)
+               call zrmatmatt_f77(1,norders(ich),zints,
+     1              norders(ich),umat,wnear(iquad(iper(j))))
+               
+            endif
+         enddo
+      enddo
+C$OMP END PARALLEL DO      
+
+
+c
+c
+      return
+      end
+c
+c
+c
+c
+      
+      subroutine zchunk_buildmat_readrow(nrow,ncol,a,irow,r)
+      implicit none
+      integer nrow,ncol,irow,j
+      complex *16 :: a(nrow,ncol), r(ncol)
+
+      do j = 1,ncol
+         r(j) = a(irow,j)
+      enddo
+      
+      return
+      end
+
+
+      subroutine dgetoncurvequad_ggq2d(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,adjs,eps,ipv,
+     2     fker,ndd,dpars,ndz,zpars,ndi,ipars,nnz,row_ptr,
+     3     col_ind,iquad,nquad,wnear,ier)
+c
+c------------------------
+c     This subroutine generates the near field quadrature
+c     for on curve interactions
+c     for a given kernel which is assumed to be
+c     a compact value integral operator (principal value and 
+c     hypersingular options will be added in later)
+c     where the near field is specified by the user 
+c     in row sparse compressed format.
+c     
+c     The quadrature is computed by generalized Gaussian
+c     quadrature for self and near interactions and adaptive
+c     integration for other interactions
+c
+c  Input arguments:
+c
+c    - nch: integer
+c        number of chunks
+c    - norders: integer(nch)
+c        order of discretization on each chunk
+c    - ixys: integer(nch+1)
+c        ixys(i) denotes the starting location in srccoefs,
+c        and srcvals array corresponding to chunk i
+c    - iptype: integer(nch)
+c        type of chunk
+c        *  iptype = 1, triangular chunk discretized using RV nodes
+c    - npts: integer
+c        total number of discretization points on the boundary
+c    - srccoefs: double precision (6,npts)
+c        Basis coefficients of x,y,dxdt,dydt,dxdt2,dydt2
+c        if(iptype.eq.1) then basis = Legendre polynomials
+c    - srcvals: double precision (8,npts)
+c        x,y,dxdt,dydt,dxdt2,dydt2,rnx,rny at discretization points
+c    - eps: double precision
+c        precision requested
+c    - ipv: integer
+c        Flag for choosing type of self-quadrature
+c        * ipv = 0, for compact/weakly singular operators
+c        * ipv = 1, for singular operators (Currently not supported)
+c        * ipv = 2, for hypersingular operators (currently not supported)
+c    - fker: procedure pointer
+c        function handle for the kernel. Calling sequence 
+c        * fker(srcinfo,ndtarg,targinfo,ndd,dpars,ndz,zpars,ndi,ipars,val)
+c    - ndd: integer
+c        number of double precision parameters
+c    - dpars: double precision(ndd)
+c        double precision parameters
+c    - ndz: integer
+c        number of double complex parameters
+c    - zpars: double complex(ndz)
+c        double complex parameters
+c    - ndi: integer
+c        number of integer parameters
+c    - ipars: integer(ndi)
+c        integer parameters
+c    - nnz: integer
+c        number of source chunk-> target interactions in the near field
+c    - row_ptr: integer(ntarg+1)
+c        row_ptr(i) is the pointer
+c        to col_ind array where list of relevant source chunkes
+c        for target i start
+c    - col_ind: integer (nnz)
+c        list of source chunkes relevant for all targets, sorted
+c        by the target number
+c    - iquad: integer(nnz+1)
+c        location in wnear array where quadrature for col_ind(i)
+c        starts
+c    - nquad: integer
+c        number of entries in wnear
+c
+c  Output parameters:
+c
+c    - wnear: double (nquad)
+c        near field quadrature corrections
+c----------------------------------------------------               
+c
+      implicit real *8 (a-h,o-z)
+      integer, intent(in) :: ndi,ndd,ndz,ipv
+      integer, intent(out) :: ier, adjs(2,nch)
+      integer, intent(in) :: ipars(ndi)
+      integer, intent(in) :: nch,norders(nch),npts
+      integer, intent(in) :: ixys(nch+1),iptype(nch)
+      real *8, intent(in) :: srccoefs(6,npts),srcvals(8,npts),eps
+      real *8, intent(in) :: dpars(ndd)
+      complex *16, intent(in) :: zpars(ndz)
+      integer, intent(in) :: nnz
+      integer, intent(in) :: row_ptr(npts+1),col_ind(nnz),iquad(nnz+1)
+      real *8, intent(out) :: wnear(nquad)
+
+      integer nchmax
+      integer, allocatable :: row_ind(:),col_ptr(:),iper(:),ichunk(:)
+      real *8, allocatable :: umat(:,:),vmat(:,:),ts(:),wts(:)
+      real *8, allocatable :: dints(:),dtmp(:)
+      integer itarg,kmax,opdims(2)
+      real *8, allocatable :: xs1(:), ws1(:), xs0(:,:), ws0(:,:)
+      real *8, allocatable :: ainterp1(:,:), ainterp0(:,:,:)
+      real *8, allocatable :: work(:), dwork(:), srcnbor(:,:)
+      integer, allocatable :: nquads0(:), iquad0lddr(:), inborlist(:)
+      real *8, allocatable :: submat(:,:),submatnbor(:)
+      
+      external fker
+
+      ier = 0
+      
+      norder = norders(1)
+      do i = 2,nch
+         if (norders(i) .ne. norder) then
+            ier = 1
+            return
+         endif
+      enddo
+
+      itype = 2
+      allocate(ts(norder),umat(norder,norder),vmat(norder,norder),
+     1     wts(norder))
+      call legeexps(itype,norder,ts,umat,vmat,wts)
+      allocate(dints(norder+5),dtmp(norder+5))
+
+c     load ggq nodes
+
+      call ggq2dstd_get_quads_info(norder, nquad1, nquad0, ier1)
+      if (ier1 .ne. 0) then
+         ier = 2
+         return
+      endif
+      allocate(xs1(nquad1), ws1(nquad1))
+      allocate(xs0(nquad0,norder), ws0(nquad0,norder))
+      call ggq2dstd_get_quads(norder, nquad1, xs1, ws1, nquad0,
+     1     xs0, ws0)
+
+c     this ladder structure will make it easier later
+c     to use rules that have a variable number of nodes per target
+      
+      allocate(nquads0(norder),iquad0lddr(norder+1))
+      do i = 1,norder
+         nquads0(i) = nquad0
+         iquad0lddr(i) = (i-1)*nquad0+1
+      enddo
+      iquad0lddr(norder+1) = norder*nquad0+1
+
+c     precompute interpolation matrices
+
+      allocate(ainterp1(nquad1,norder),ainterp0(nquad0,norder,norder))
+
+      nquadmax = max(nquad1,nquad0)
+      lwork = 2*norder**2+norder + 100
+      allocate(work(lwork))
+      
+      call lematrin(norder,nquad1,xs1,ainterp1,ts,work)
+      do i = 1,norder
+         call lematrin(norder,nquad0,xs0(1,i),ainterp0(1,1,i),ts,work)
+      enddo
+
+c     get transpose of interaction info
+      
+      allocate(row_ind(nnz),col_ptr(nch+1),iper(nnz))
+      call rsc_to_csc(nch,npts,nnz,row_ptr,col_ind,col_ptr,
+     1     row_ind,iper)
+
+C$OMP PARALLEL DO
+      do i=1,nquad
+        wnear(i) = 0
+      enddo
+C$OMP END PARALLEL DO      
+
+      allocate(ichunk(npts))
+      
+c$OMP PARALLEL DO
+      do i = 1,nch
+         do j = ixys(i),(ixys(i+1)-1)
+            ichunk(j)=i
+         enddo
+      enddo
+c$OMP END PARALLEL DO      
+
+c     storage for ggq work
+
+      opdims(1)=1
+      opdims(2)=1
+      
+      idim1 = opdims(1)*norder*nch
+      idim1sub = opdims(1)*norder
+      idim1nbor = opdims(1)*norder*2
+      idim2sub = opdims(2)*norder
+      
+      allocate(submat(idim1sub,idim2sub))
+
+      nquadmax = 0
+      nquadmax = max(nquadmax,nquad1)
+      nquadmax = max(nquadmax,norder)
+      do i = 1,norder
+         nquadmax = max(nquadmax,nquads0(i))
+      enddo
+
+      lwork= (8+1)*nquadmax + opdims(1)*opdims(2)*nquadmax*norder      
+      allocate(dwork(lwork),
+     2     inborlist(2*norder),srcnbor(8,2*norder),
+     3     submatnbor(idim1nbor*idim2sub))
+
+
+c     adaptive integration params
+      
+      nqorder = 10
+      nchmax = 10000
+
+c     always 8 because these are source points
+      ndt = 8
+
+C$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(itarg,j,ich,istart,dints)
+C$OMP$PRIVATE(dtmp,ntarg0,dwork,submat,ichtarg,ichl,ichr,irel)
+C$OMP$PRIVATE(k,inborlist,inbor,nnbor,srcnbor,submatnbor)
+      do ich=1,nch
+
+         ichl=adjs(1,ich)
+         ichr=adjs(2,ich)
+         istart = ixys(ich)
+         ntarg0=norder
+         call dchunk_indrulematbuild_ggq(norder,srcvals(1,istart),
+     1        ndt,ntarg0,srcvals(1,istart),nquads0,
+     2        iquad0lddr,ainterp0,ws0,fker,ndd,dpars,ndz,zpars,
+     3        ndi,ipars,opdims,submat,dwork)
+         
+         nnbor=0
+         do j=col_ptr(ich),col_ptr(ich+1)-1
+            itarg = row_ind(j)
+            ichtarg = ichunk(itarg)
+            if (ichtarg .eq. ichl .or. ichtarg .eq. ichr) then
+               nnbor=nnbor+1
+               inborlist(nnbor)=itarg
+               do k=1,8
+                  srcnbor(k,nnbor)=srcvals(k,itarg)
+               enddo
+            endif
+         enddo
+
+         if (nnbor .gt. 0) then
+            call dchunk_onerulematbuild_ggq(norder,srcvals(1,istart),
+     1           nquad1,ainterp1,ws1,ndt,nnbor,srcnbor,fker,
+     2           ndd,dpars,ndz,zpars,ndi,ipars,opdims,submatnbor,
+     3           dwork)
+         endif
+
+         inbor=0
+         do j=col_ptr(ich),col_ptr(ich+1)-1
+            itarg = row_ind(j)
+            ichtarg = ichunk(itarg)
+            if (ichtarg .eq. ich) then
+c     self
+               irel = itarg-istart+1
+               do k=1,norder
+                  wnear(iquad(iper(j))+k-1)=submat(irel,k)
+               enddo
+            else if (ichtarg .eq. ichl .or. ichtarg .eq. ichr) then
+c     neighbor rule
+               inbor=inbor+1
+               call dchunk_buildmat_readrow(nnbor,norder,
+     1              submatnbor,inbor,wnear(iquad(iper(j))))
+            else
+c     any other target by adaptive
+               ntarg0=1
+               call dchunkints_lege(eps,norders(ich),srccoefs(1,istart),
+     1              ndt,ntarg0,srcvals(1,itarg),norders(ich),fker,
+     2              ndd,dpars,ndz,zpars,ndi,ipars,nqorder,nchmax,
+     3              dints)
+               call dmatmatt(1,norders(ich),dints,
+     1              norders(ich),umat,wnear(iquad(iper(j))))
+              
+            endif
+         enddo
+      enddo
+C$OMP END PARALLEL DO      
+
+
+c
+c
+      return
+      end
+c
+c
+      
+      subroutine dchunk_buildmat_readrow(nrow,ncol,a,irow,r)
+      implicit none
+      integer nrow,ncol,irow,j
+      real *8 :: a(nrow,ncol), r(ncol)
+
+      do j = 1,ncol
+         r(j) = a(irow,j)
+      enddo
+      
+      return
+      end
+
+      

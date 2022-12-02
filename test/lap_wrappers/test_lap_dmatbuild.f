@@ -6,12 +6,12 @@ c
       implicit real *8 (a-h,o-z) 
       real *8, allocatable :: srcvals(:,:),srccoefs(:,:),targs(:,:)
       integer, allocatable :: adjs(:,:), ipiv(:)
-      real *8 errs(6),ts(2)
+      real *8 ts(2)
       character *100 fname
       integer ipars(2)
       real *8, allocatable :: ubdry(:), uin(:)
-      real *8, allocatable :: potbdry(:), potin(:)
-      real *8, allocatable :: sysmat(:,:)
+      real *8, allocatable :: potbdry(:), potin(:), potin2(:)
+      real *8, allocatable :: sysmat(:,:), sigma2(:), errs(:), rres(:)
       
       integer, allocatable :: norders(:),ixys(:),iptype(:)
       integer, allocatable :: ixyso(:),nfars(:)
@@ -56,13 +56,13 @@ c
       ndz = 0
 
       dpars(1) = 1
-      dpars(2) = 0.25d0
+      dpars(2) = 0.5d0
       ipars(1) = 5
       
       nover = 1
       nch = 0
       ier = 0
-      eps = 1.0d-5
+      eps = 1.0d-9
       call chunkfunc_guru(eps,rlmax,ifclosed,irefinel,irefiner,rlmaxe,
      1  ta,tb,fstarn_simple,ndd,dpars,ndz,zpars,ndi,ipars,nover,
      2  k,nchmax,nch,norders,ixys,iptype,npts,srcvals,srccoefs,ab,adjs,
@@ -88,7 +88,7 @@ c
          xyz_in(2,i) = yy*radfac
       enddo
       
-      allocate(sigma(npts),ubdry(npts),uin(ntest))
+      allocate(sigma(npts),ubdry(npts),uin(ntest),sigma2(npts))
 
 c     get boundary data
       
@@ -144,8 +144,20 @@ c     build system matrix (-1/2 I + D)
 
       write(*,*) 'time solve with LAPACK', t2-t1
       write(*,*) 'info ', info
+
+
+      dpars(1)=0
+      dpars(2)=1
+      ifinout=0
+      numit=30
+      eps_gmres=1d-14
+      allocate(errs(numit+10),rres(numit+10))
+      call lap_comb_dir_solver_2d(nch,norders,ixys,
+     1     iptype,npts,srccoefs,srcvals,adjs,eps,dpars,numit,ifinout,
+     2     ubdry,eps_gmres,niter,errs,rres,sigma2)
       
 
+      
       ndtarg = 2
       allocate(targs(ndtarg,npts))
      
@@ -160,10 +172,7 @@ c     build system matrix (-1/2 I + D)
         ts_targ(i) = 0
       enddo
 
-      dpars(1) = 0
-      dpars(2) = 1
-
-      allocate(potbdry(npts),potin(ntest))
+      allocate(potbdry(npts),potin(ntest),potin2(ntest))
       
       call lpcomp_lap_comb_dir_2d(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,ich_id,
@@ -173,12 +182,25 @@ c     build system matrix (-1/2 I + D)
       call lpcomp_lap_comb_dir_2d(nch,norders,ixys,
      1     iptype,npts,srccoefs,srcvals,ndtarg2,ntest,xyz_in,ich_id,
      2     ts_targ,eps,dpars,sigma,potin)
+      call lpcomp_lap_comb_dir_2d(nch,norders,ixys,
+     1     iptype,npts,srccoefs,srcvals,ndtarg2,ntest,xyz_in,ich_id,
+     2     ts_targ,eps,dpars,sigma2,potin2)
 
       call prin2('pot in *',potin,1)
       call prin2('u in *',uin,1)
 
-      write(*,*) abs(potin(1)-uin(1))
+      errmax1=0
+      errmax2=0
+      do i = 1,ntest
+         temperr1 = abs(potin(i)-uin(i))
+         temperr2 = abs(potin2(i)-uin(i))
+         errmax1 = max(errmax1,temperr1)
+         errmax2 = max(errmax2,temperr2)
+      enddo
 
+      write(*,*) errmax1
+      write(*,*) errmax2
+      
       nsuccess = 0
       if (abs(potin(1)-uin(1)) .lt. eps) nsuccess=1
       ntests=1
@@ -188,9 +210,7 @@ c     build system matrix (-1/2 I + D)
      1  ' out of ',ntests,' in lap_wrappers matrix build testing suite'
       close(33)
       
-
-
-      return      
+      stop
       end
 
 

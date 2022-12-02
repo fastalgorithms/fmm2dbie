@@ -743,3 +743,63 @@ c
       return
       end
       
+
+
+      subroutine boundingrect_cvxpolygon(relpoly,nrel,rect)
+c     
+c     given a convex polygon find the optimal bounding
+c     rectangle (smallest area)
+c     
+      implicit real *8 (a-h,o-z)
+      dimension relpoly(2,nrel), rect(2,4)
+
+      real *8 :: dnave(2), dtave(2)
+
+      amin=huge(1d0)
+      do j = 1,nrel
+         if (j .lt. nrel) then
+            v1 = relpoly(1,j+1)-relpoly(1,j)
+            v2 = relpoly(2,j+1)-relpoly(2,j)
+         else
+            v1 = relpoly(1,1)-relpoly(1,nrel)
+            v2 = relpoly(2,1)-relpoly(2,nrel)
+         endif            
+         vp1 = -v2
+         vp2 = v1
+
+         dbig1=-huge(1d0)
+         dsml1=huge(1d0)
+         dbig2=-huge(1d0)
+         dsml2=huge(1d0)
+         do i = 1,nrel
+            c1v=v1*relpoly(1,i)+v2*relpoly(2,i)
+            c1vp=vp1*relpoly(1,i)+vp2*relpoly(2,i)
+            dbig1=max(dbig1,c1v)
+            dsml1=min(dsml1,c1v)
+            dbig2=max(dbig2,c1vp)
+            dsml2=min(dsml2,c1vp)
+         enddo
+         vv = v1*v1+v2*v2
+         aj = abs( (dbig1-dsml1)*(dbig2-dsml2)/vv )
+         if (aj .lt. amin) then
+            amin = aj
+            dbig1=dbig1/vv
+            dsml1=dsml1/vv
+            dbig2=dbig2/vv
+            dsml2=dsml2/vv
+            rect(1,1) = v1*dbig1+vp1*dbig2
+            rect(2,1) = v2*dbig1+vp2*dbig2
+            rect(1,2) = v1*dbig1+vp1*dsml2
+            rect(2,2) = v2*dbig1+vp2*dsml2
+            rect(1,3) = v1*dsml1+vp1*dsml2
+            rect(2,3) = v2*dsml1+vp2*dsml2
+            rect(1,4) = v1*dsml1+vp1*dbig2
+            rect(2,4) = v2*dsml1+vp2*dbig2
+         endif
+      enddo
+
+      return
+      end
+      
+
+      

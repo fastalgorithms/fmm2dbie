@@ -61,7 +61,7 @@
       dpars(2) = 0.005d0
 
       ipars(1) = 0
-      nover = 1
+      nover = 3
       nch = 0
       ier = 0
       eps = 1.0d-12
@@ -138,7 +138,7 @@ c
       allocate(row_ptr(npts+1),col_ind(nnz))
       
       call findnear2d(cms,nch,rad_near,ndtarg,targs,npts,row_ptr, 
-     1        col_ind)
+     1     col_ind)
 
       allocate(iquad(nnz+1)) 
       call get_iquad_rsc2d(nch,ixys,npts,nnz,row_ptr,col_ind,
@@ -201,17 +201,28 @@ c     2    nnz,row_ptr,col_ind,rfac,nfars,ixyso)
 
 cc      goto 1111
 
-      call getnearquad_helm_comb_dir_2d(nch,norders,
-     1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
-     1      ich_id,ts_targ,eps,zpars,iquadtype,nnz,row_ptr,col_ind,
-     1      iquad,nquad,slp_near)
+c      call getnearquad_helm_comb_dir_2d(nch,norders,
+c     1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
+c     1      ich_id,ts_targ,eps,zpars,iquadtype,nnz,row_ptr,col_ind,
+c     1     iquad,nquad,slp_near)
+
+      call getoncurvequad_helm_comb_dir_2d(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,adjs,
+     2     eps,zpars,iquadtype,nnz,row_ptr,col_ind,
+     3     iquad,nquad,slp_near)
+      
       
       zpars(2) = 0.0d0
       zpars(3) = 1.0d0
-      call getnearquad_helm_comb_dir_2d(nch,norders,
-     1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
-     1      ich_id,ts_targ,eps,zpars,iquadtype,
-     1      nnz,row_ptr,col_ind,iquad,nquad,dlp_near)
+c      call getnearquad_helm_comb_dir_2d(nch,norders,
+c     1      ixys,iptype,npts,srccoefs,srcvals,ndtarg,npts,targs,
+c     1      ich_id,ts_targ,eps,zpars,iquadtype,
+c     1      nnz,row_ptr,col_ind,iquad,nquad,dlp_near)
+
+      call getoncurvequad_helm_comb_dir_2d(nch,norders,
+     1     ixys,iptype,npts,srccoefs,srcvals,adjs,
+     2     eps,zpars,iquadtype,nnz,row_ptr,col_ind,
+     3     iquad,nquad,dlp_near)
       
       call cpu_time(t2)
       tquadgen = t2-t1
@@ -301,12 +312,12 @@ c     1     real(potdlp(i)),imag(potdlp(i)),real(uval(i)),imag(uval(i))
 
       nsuccess = i1+i2
 
-      open(unit=33,file='../../print_testres.txt',access='append')
-      write(33,'(a,i1,a,i1,a)') 'Successfully completed ',nsuccess,
-     1  ' out of ',ntests,' in helm_wrappers testing suite'
-      close(33)
+c      open(unit=33,file='../../print_testres.txt',access='append')
+c      write(33,'(a,i1,a,i1,a)') 'Successfully completed ',nsuccess,
+c     1  ' out of ',ntests,' in helm_wrappers testing suite'
+c      close(33)
 
-      return      
+      stop      
       end
 
 
