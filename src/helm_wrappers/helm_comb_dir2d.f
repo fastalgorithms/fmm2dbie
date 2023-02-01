@@ -329,7 +329,7 @@ c
      1         iquad)
 
       ikerorder = -1
-      if(abs(dpars(2)).gt.1.0d-16) ikerorder = 0
+      if(abs(zpars(2)).gt.1.0d-16) ikerorder = 0
 
 c
 c    estimate oversampling for far-field, and oversample geometry
