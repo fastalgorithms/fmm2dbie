@@ -17,3 +17,4 @@ located in an appropriate location (`/usr/local/lib` on MacOSX, and
 environment variable of LD_LIBRARY_PATH set to location of libfmm3d.so 
 on linux machines)
 
+All the branches in this repository are still in development code, and most functionalities haven't been thoroughly tested. Use with caution!
