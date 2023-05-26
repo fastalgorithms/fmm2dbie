@@ -237,6 +237,11 @@ test/helm:
 	$(FC) $(FFLAGS) test/helm_wrappers/test_helm_wrappers_qg_lp.f -o test/helm_wrappers/int2-helm lib-static/$(STATICLIB) $(LIBS)
 	$(FC) $(FFLAGS) test/helm_wrappers/test_helm_zmatbuild.f -o test/helm_wrappers/int2-helm-mat lib-static/$(STATICLIB) $(LIBS)
 
+
+test/helm-trans:
+	$(FC) $(FFLAGS) test/helm_wrappers/test_helm_comb_trans2d.f90 -o test/helm_wrappers/int2-helm-trans lib-static/$(STATICLIB) $(LIBS)
+	
+
 test/lap: 
 	$(FC) $(FFLAGS) test/lap_wrappers/test_lap_wrappers_qg_lp.f -o test/lap_wrappers/int2-lap lib-static/$(STATICLIB) $(LIBS)
 	$(FC) $(FFLAGS) test/lap_wrappers/test_lap_dmatbuild.f -o test/lap_wrappers/int2-lap-mat lib-static/$(STATICLIB) $(LIBS)
